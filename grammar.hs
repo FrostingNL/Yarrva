@@ -1,7 +1,9 @@
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 returnKey 	= Keyword "avast"
-equalsKey 	= Keyword "be"
+equalsKey 	= Keyword "be"		-- n be a
+lesserKey	= Keyword "lower"	-- n be lower a
+greaterKey	= Keyword "higher"	-- n be higher a
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 varKey 		= Keyword "booty"
@@ -57,3 +59,15 @@ helloWorld = concat ["fleet HelloWorld {",
 					 "	parrot \"Ahoy World!\" !",
 					 "}"
 					]
+
+sampleFunction = concat ["fleet SampleFunction {"
+						 "	ship add3(booty i) {",
+						 "		avast i + 3!",
+						 "	}",
+						 "	",
+						 "	flagship() {",
+						 "		booty a be add3(5)!",
+						 "		parrot a!",
+						 "	}",
+						 "}"
+						]
