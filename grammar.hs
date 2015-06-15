@@ -1,3 +1,11 @@
+import Parse
+
+grammar :: Grammar
+grammar nt = case nt of
+	Program -> [[progKey, lcbr, Rep0 [Expr], rcbr]]
+	Expr 	-> [[varKey, idf, equalsKey, num, endmark],
+				[printKey, num, endmark]]
+
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 returnKey 	= Keyword "avast"
