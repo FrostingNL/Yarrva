@@ -65,6 +65,9 @@ tokenizer START (x:xs) word | length possibleKeywords > 1 = tokenizer KW xs newW
 checkKeywords ::  String -> [String]
 checkKeywords possibleToken = [x | x <- allKeywords, startsWith possibleToken x]
 
+allKeywords :: [String]
+allKeywords = ["fleet", "ship", "avast", "be", "lower", "higher", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+
 sampleProgram = concat ["fleet Sample {",
 						"   booty a be 3!",
 						"   booty b be 6!",
