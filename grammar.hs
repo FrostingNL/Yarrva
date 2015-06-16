@@ -61,8 +61,9 @@ tokenizer s (' ':xs) = tokenizer s xs
 tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
 tokenizer KW (x:xs)
-	| isKeyword (x:restWord) 	= (Keyword (x:restWord), x:restWord): tokenizer KW restString
-	| otherwise				= (Keyword "var", (x:restWord)): tokenizer KW restString
+	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
+	| all (==True) (map isNumber (x:restWord))		= (Nmbr, x:restWord): tokenizer KW restString
+	| otherwise										= (Keyword "var", (x:restWord)): tokenizer KW restString
 	where
 		restWord = getWord xs
 		restString = getRest xs
