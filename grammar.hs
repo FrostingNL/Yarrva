@@ -4,13 +4,6 @@ import Data.List
 import Debug.Trace
 import FPPrac.Trees
 
-{-
-TO-DO:
-	- Tokenizer
-	- Testing (/w GUI)
-	- Do the rest
--}
-
 grammar :: Grammar
 grammar nt = case nt of
 	Program -> [[progKey, idf, lcbr, Rep0 [Stat], rcbr]]
@@ -67,10 +60,13 @@ data State = START | ERROR | KW | KWWORD
 
 tokenizer :: State -> String -> [Token]
 tokenizer _ [] = []
-tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
 tokenizer s (' ':xs) = tokenizer s xs
+
+tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
+
 tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
+
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW (x:xs) 
@@ -81,9 +77,10 @@ tokenizer KW (x:xs)
 	| isNumber x									= (Nmbr, x:restNumber): tokenizer KW restString
 	| otherwise										= (Idf, (x:restWord)): tokenizer KW restString
 	where
-		restNumber = getNum xs
-		restWord = getWord xs
-		restString = getRest xs
+		restNumber 	= getNum xs
+		restWord 	= getWord xs
+		restString 	= getRest xs
+		otherTokens = tokenizer KW restString
 
 rmEndMark :: String -> String
 rmEndMark [] = []
