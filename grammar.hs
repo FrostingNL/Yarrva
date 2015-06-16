@@ -54,12 +54,14 @@ data State = START | ERROR | KW | SY | NUM | IDF | BOOL | comment
 tokenizer :: State -> String -> [Token]
 tokenizer _ [] word = []
 tokenizer ERROR _ _ = error "Shiver me timbers! You done it wrong."
-tokenizer START (x:xs) word | length possibleKeywords > 1 = tokenizer KW xs newWord
+tokenizer START (x:xs) _    = length checkKeywords x > 1 = tokenizer KW (x:xs) ""
+
+tokenizer KW (x:xs) word    | length possibleKeywords > 1 = tokenizer KW xs newWord
 							| length possibleKeywords == 1 && startsWith ' ' xs = (KeyWord newWord, newWord): tokenizer START (tail xs) ""
 							| length possibleKeywords == 0 = tokenizer ERROR xs word
 							| otherwise = tokenizer ERROR xs word
 							where 
-								possibleKeywords = checkKeywords newWorld
+								possibleKeywords = checkKeywords newWord
 								newWord = (x:word)
 
 checkKeywords ::  String -> [String]
