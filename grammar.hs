@@ -1,4 +1,5 @@
 import Parse
+import Debug.Trace
 
 {-
 TO-DO:
@@ -49,26 +50,35 @@ endmark = Symbol "!"
 colon   = Symbol ":"
 star	= Symbol "*"
 
-data State = START | ERROR | KW | SY | NUM | IDF | BOOL | comment
+data State = START | ERROR | KW | SY | NUM | IDF | BOOL | COMMENT
 
-tokenizer :: State -> String -> [Token]
+tokenizer :: State -> String -> String -> [Token]
 tokenizer _ [] word = []
 tokenizer ERROR _ _ = error "Shiver me timbers! You done it wrong."
-tokenizer START (x:xs) _    = length checkKeywords x > 1 = tokenizer KW (x:xs) ""
-
-tokenizer KW (x:xs) word    | length possibleKeywords > 1 = tokenizer KW xs newWord
-							| length possibleKeywords == 1 && startsWith ' ' xs = (KeyWord newWord, newWord): tokenizer START (tail xs) ""
-							| length possibleKeywords == 0 = tokenizer ERROR xs word
-							| otherwise = tokenizer ERROR xs word
-							where 
-								possibleKeywords = checkKeywords newWord
-								newWord = (x:word)
+tokenizer START (x:xs) _    
+	| length (checkKeywords [x]) > 1 = tokenizer KW (x:xs) ""
+	| otherwise = tokenizer ERROR xs ""
+tokenizer KW (x:xs) word    
+	| length possibleKeywords > 1 = tokenizer KW xs newWord
+	| length possibleKeywords == 1 && startsWith " " xs = (Keyword newWord, newWord): tokenizer START (tail xs) ""
+	| length possibleKeywords == 0 = tokenizer ERROR xs word
+	| otherwise = tokenizer ERROR xs word
+	where 
+		possibleKeywords = checkKeywords newWord
+		newWord = (x:word)
 
 checkKeywords ::  String -> [String]
 checkKeywords possibleToken = [x | x <- allKeywords, startsWith possibleToken x]
 
 allKeywords :: [String]
 allKeywords = ["fleet", "ship", "avast", "be", "lower", "higher", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+
+startsWith :: String -> String -> Bool
+startsWith [] _ 	= True
+startsWith _ [] 	= False
+startsWith (s:search) (w:word) 
+	| s == w = startsWith search word
+	| otherwise = False
 
 sampleProgram = concat ["fleet Sample {",
 						"   booty a be 3!",
