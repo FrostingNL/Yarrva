@@ -6,14 +6,18 @@ import FPPrac.Trees
 
 grammar :: Grammar
 grammar nt = case nt of
-	Program -> [[progKey, idf, lcbr, Rep0 [Stat], rcbr]]
-	Stat 	-> [[varKey, idf, equalsKey, Expr, endmark],
-				[ifExprKey, lpar, BoolExpr, rpar, lcbr, Rep0 [Stat], rcbr]]
-	BoolExpr-> [[Expr, equalsKey, Expr],
+	Program -> [[progKey, idf, Block]]
+	Stat 	-> [[Opt [varKey], idf, equalsKey, Expr, endmark],
+				[ifExprKey, lpar, BoolExpr, rpar, Block],
+				[whileKey, lpar, BoolExpr, rpar, Block],
+				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block]]
+	Block	-> [[lcbr, Rep0 [Stat], rcbr]]
+	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],
 				[Bool],
 				[idf],
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 
 	Expr 	-> [[Type, SyntCat Op, Type],
+				[Type, SyntCat Op, SyntCat Op],
 				[Type]]
 	Op		-> [[plus],
 				[minus],
@@ -62,6 +66,7 @@ times   = Symbol "*"
 divide  = Symbol "/"
 notSym  = Symbol "~"
 colon   = Symbol ":"
+point	= Symbol "."
 
 data State = START | ERROR | KW | KWWORD
 
@@ -78,6 +83,7 @@ tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW ('(':xs) = (lpar, ['(']): tokenizer KW xs
 tokenizer KW (')':xs) = (rpar, [')']): tokenizer KW xs
+tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
 tokenizer KW (x:xs) 
 	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
@@ -112,13 +118,13 @@ getNum (x:xs)
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| elem x " +-*/,()" = []
+	| elem x " +-*/,()." = []
 	| otherwise = x: getWord xs
 
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| elem x ",+-*/()" = (x:xs)
+	| elem x ",+-*/()." = (x:xs)
 	| x == ' ' = xs
 	| otherwise = getRest xs
 
@@ -178,6 +184,9 @@ test = concat ["fleet Prog {",
 			   "    booty b be 2+3, Arrr!",
 			   "    parley (b be a) {",
 			   "        booty c be 1, Arrr!",
+			   "        navigate (booty i be 0. i be lower 5. i++) {",
+			   "            booty c be c+1, Arrr!",
+			   "        }",
 			   "    }",
 			   "}"
 			   ]
