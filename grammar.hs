@@ -49,6 +49,22 @@ endmark = Symbol "!"
 colon   = Symbol ":"
 star	= Symbol "*"
 
+data State = START | ERROR | KW | SY | NUM | IDF | BOOL | comment
+
+tokenizer :: State -> String -> [Token]
+tokenizer _ [] word = []
+tokenizer ERROR _ _ = error "Shiver me timbers! You done it wrong."
+tokenizer START (x:xs) word | length possibleKeywords > 1 = tokenizer KW xs newWord
+							| length possibleKeywords == 1 && startsWith ' ' xs = (KeyWord newWord, newWord): tokenizer START (tail xs) ""
+							| length possibleKeywords == 0 = tokenizer ERROR xs word
+							| otherwise = tokenizer ERROR xs word
+							where 
+								possibleKeywords = checkKeywords newWorld
+								newWord = (x:word)
+
+checkKeywords ::  String -> [String]
+checkKeywords possibleToken = [x | x <- allKeywords, startsWith possibleToken x]
+
 sampleProgram = concat ["fleet Sample {",
 						"   booty a be 3!",
 						"   booty b be 6!",
