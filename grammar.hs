@@ -109,16 +109,21 @@ tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
-tokenizer KW (x:xs)
+tokenizer KW (x:xs) 
+	| (x:xs) == getEndmark 							= (endmark, x:xs): tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : tokenizer KW restString
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
 	| elem x "+-*/"									= (Op, [x]): tokenizer KW (restWord ++ restString) 
-	| all (==True) (map isNumber (x:restWord))		= (Nmbr, x:restWord): tokenizer KW restString
-	| (x:restWord == getEndmark)					= (endmark, x:restWord): tokenizer KW restString
+	| isNumber x									= (Nmbr, x:restNumber): tokenizer KW restString
 	| otherwise										= (Idf, (x:restWord)): tokenizer KW restString
 	where
+		restNumber = getNum xs
 		restWord = getWord xs
 		restString = getRest xs
+
+rmEndMark :: String -> String
+rmEndMark [] = []
+rmEndMark (',':' ':'A':'r':'r':'r':'!':xs) = xs
 
 isKeyword :: String -> Bool
 isKeyword s = elem s allKeywords
@@ -128,20 +133,23 @@ isBoolean word
 	| word == "Aye" || word == "Nay" = True
 	| otherwise = False
 
+getNum :: String -> String
+getNum [] = []
+getNum (x:xs)
+	| not (isNumber x) = []
+	| otherwise = x : getNum xs
+
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| x == ',' = ""
-	| x == ' ' && startsWith "Arrr!" xs = " Arrr!"
-	| elem x " ,+-*/" = ""
+	| x == ' ' = []
 	| otherwise = x: getWord xs
 
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| x == ' ' && startsWith "Arrr!" xs = getRest xs
+	| x == ',' = (x:xs)
 	| x == ' ' = xs
-	| elem x ",{}+-*/" = x:xs
 	| otherwise = getRest xs
 
 getEndmark :: String
