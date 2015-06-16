@@ -6,9 +6,18 @@ import FPPrac.Trees
 
 grammar :: Grammar
 grammar nt = case nt of
-	Program -> [[progKey, idf, lcbr, Rep0 [Stat], rcbr]]
-	Stat 	-> [[varKey, idf, equalsKey, Expr, endmark]]
+	Program -> [[progKey, idf, Block]]
+	Stat 	-> [[Opt [varKey], idf, equalsKey, Expr, endmark],
+				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],
+				[whileKey, lpar, BoolExpr, rpar, Block],
+				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block]]
+	Block	-> [[lcbr, Rep0 [Stat], rcbr]]
+	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],
+				[Bool],
+				[idf],
+				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 
 	Expr 	-> [[Type, SyntCat Op, Type],
+				[Type, SyntCat Op, SyntCat Op],
 				[Type]]
 	Op		-> [[plus],
 				[minus],
@@ -24,9 +33,9 @@ grammar nt = case nt of
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 returnKey 	= Keyword "avast"
-equalsKey 	= Keyword "be"		-- n be a
-lesserKey	= Keyword "lower"	-- n be lower a
-greaterKey	= Keyword "higher"	-- n be higher a
+equalsKey 	= Keyword "be"	
+lesserKey	= Keyword "lower"
+greaterKey	= Keyword "higher"
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 varKey 		= Keyword "booty"
@@ -38,6 +47,8 @@ printKey	= Keyword "parrot"
 continueKey = Keyword "God's speed"
 whileKey	= Keyword "whirlpool"
 forKey		= Keyword "navigate"
+orKey		= Keyword "or"
+andKey		= Keyword "and"
 endmark		= Keyword ", Arrr!"
 
 lpar    = Symbol "("
@@ -55,6 +66,7 @@ times   = Symbol "*"
 divide  = Symbol "/"
 notSym  = Symbol "~"
 colon   = Symbol ":"
+point	= Symbol "."
 
 data State = START | ERROR | KW | KWWORD
 
@@ -69,6 +81,9 @@ tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
+tokenizer KW ('(':xs) = (lpar, ['(']): tokenizer KW xs
+tokenizer KW (')':xs) = (rpar, [')']): tokenizer KW xs
+tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
 tokenizer KW (x:xs) 
 	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
@@ -103,13 +118,13 @@ getNum (x:xs)
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| elem x " +-*/," = []
+	| elem x " +-*/,()." = []
 	| otherwise = x: getWord xs
 
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| elem x ",+-*/" = (x:xs)
+	| elem x ",+-*/()." = (x:xs)
 	| x == ' ' = xs
 	| otherwise = getRest xs
 
@@ -167,7 +182,12 @@ test = concat ["fleet Prog {",
 			   "    booty a be 1, Arrr!",
 			   "    booty chest be Aye, Arrr!",
 			   "    booty b be 2+3, Arrr!",
-			   "    booty c be a+b, Arrr!",
+			   "    parley (b be a) {",
+			   "        booty c be 1, Arrr!",
+			   "        navigate (booty i be 0. i be lower 5. i++) {",
+			   "            booty c be c+1, Arrr!",
+			   "        }",
+			   "    }",
 			   "}"
 			   ]
 
