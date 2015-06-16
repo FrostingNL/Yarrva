@@ -166,8 +166,8 @@ sampleFunction = concat ["fleet SampleFunction {",
 test = concat ["fleet Prog {",
 			   "    booty a be 1, Arrr!",
 			   "    booty chest be Aye, Arrr!",
-			   "    booty b be 2 + 3, Arrr!",
-			   "    booty c be a + b, Arrr!",
+			   "    booty b be 2+3, Arrr!",
+			   "    booty c be a+b, Arrr!",
 			   "}"
 			   ]
 
