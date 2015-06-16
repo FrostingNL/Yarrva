@@ -54,18 +54,18 @@ data State = START | ERROR | KW | SY | NUM | IDF | BOOL | COMMENT
 
 tokenizer :: State -> String -> String -> [Token]
 tokenizer _ [] word = []
-tokenizer ERROR _ _ = error "Shiver me timbers! You done it wrong."
+tokenizer ERROR search word = (trace search) error "Shiver me timbers! You done it wrong."
 tokenizer START (x:xs) _    
-	| length (checkKeywords [x]) > 1 = tokenizer KW (x:xs) ""
+	| length (checkKeywords [x]) >= 1 = tokenizer KW (x:xs) ""
 	| otherwise = tokenizer ERROR xs ""
 tokenizer KW (x:xs) word    
-	| length possibleKeywords > 1 = tokenizer KW xs newWord
-	| length possibleKeywords == 1 && startsWith " " xs = (Keyword newWord, newWord): tokenizer START (tail xs) ""
+	| length possibleKeywords > 1 || (length possibleKeywords == 1 && not (startsWith " " xs)) = tokenizer KW xs newWord
+	| length possibleKeywords == 1 && (startsWith " " xs || xs == []) = (Keyword newWord, newWord): tokenizer START (tail xs) ""
 	| length possibleKeywords == 0 = tokenizer ERROR xs word
 	| otherwise = tokenizer ERROR xs word
 	where 
 		possibleKeywords = checkKeywords newWord
-		newWord = (x:word)
+		newWord = (word++[x])
 
 checkKeywords ::  String -> [String]
 checkKeywords possibleToken = [x | x <- allKeywords, startsWith possibleToken x]
