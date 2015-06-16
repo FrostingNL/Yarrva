@@ -63,42 +63,6 @@ divide  = Symbol "/"
 notSym  = Symbol "~"
 colon   = Symbol ":"
 
-{-
-data State = START | ERROR | KW | SYM | NUM | IDF | BOOL | COMMENT | KWW
-
-tokenizer :: State -> String -> String -> [Token]
-tokenizer _ [] word = []
-tokenizer ERROR search word = (trace search) error "Shiver me timbers! You done it wrong."
-tokenizer START (x:xs) _    
-	| length (checkKeywords [x]) >= 1 = tokenizer KW (x:xs) ""
-	| otherwise = tokenizer ERROR xs ""
-tokenizer KW (x:xs) word  
-	| length possibleKeywords > 1 						= tokenizer KW xs newWord
-	| length possibleKeywords == 1 && startsWith " " xs = tokenizer KWW (tail xs) newWord
-	| length possibleKeywords == 1 && xs == [] 			= [(Keyword newWord, newWord)]
-	| length possibleKeywords == 1 						= tokenizer KW xs newWord
-	| length possibleKeywords == 0 						= tokenizer ERROR xs word
-	| otherwise 										= tokenizer ERROR xs word
-	where 
-		possibleKeywords = checkKeywords newWord
-		newWord = word ++ [x]
-tokenizer KWW (x:xs) word
-	| x == '(' = tokenizer ERROR [] word
-    | otherwise = (Keyword word, getWord (x:xs)) : tokenizer START (rmWord xs) ""
-
-rmWord :: String -> String
-rmWord [] = []
-rmWord (x:xs) 
-	| x == ' ' = []
-	| otherwise = rmWord xs
-
-getWord :: String -> String
-getWord [] = []
-getWord (x:xs)
-	| x /= ' ' = x : getWord xs
-	| otherwise = []
--}
-
 data State = START | ERROR | KW | KWWORD
 
 tokenizer :: State -> String -> [Token]
@@ -110,7 +74,7 @@ tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW (x:xs) 
-	| (x:xs) == getEndmark 							= (endmark, x:xs): tokenizer KW (rmEndMark (x:xs))
+	| startsWith getEndmark (x:xs)					= (endmark, x:xs): tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : tokenizer KW restString
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
 	| elem x "+-*/"									= (Op, [x]): tokenizer KW (restWord ++ restString) 
@@ -205,8 +169,8 @@ sampleFunction = concat ["fleet SampleFunction {",
 test = concat ["fleet Prog {",
 			   "    booty a be 1, Arrr!",
 			   "    booty chest be Aye, Arrr!",
-			   "    booty b be 2+3, Arrr!",
-			   "    booty c be a+b, Arrr!",
+			   "    booty b be 2 + 3, Arrr!",
+			   "    booty c be a + b, Arrr!",
 			   "}"
 			   ]
 
