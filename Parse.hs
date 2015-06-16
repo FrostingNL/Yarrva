@@ -27,6 +27,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Expr
 		| Idf
 		| Nmbr
+		| Bool
 
 		deriving (Eq,Show)
 
