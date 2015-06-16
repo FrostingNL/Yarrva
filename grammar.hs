@@ -2,6 +2,7 @@ import Parse
 import Data.Char
 import Data.List
 import Debug.Trace
+import FPPrac.Trees
 
 {-
 TO-DO:
@@ -12,9 +13,20 @@ TO-DO:
 
 grammar :: Grammar
 grammar nt = case nt of
-	Program -> [[progKey, lcbr, Rep0 [Expr], rcbr]]
-	Expr 	-> [[varKey, idf, equalsKey, num, endmark],
-				[printKey, num, endmark]]
+	Program -> [[progKey, idf, lcbr, Rep0 [Stat], rcbr]]
+	Stat 	-> [[varKey, idf, equalsKey, Expr, endmark]]
+	Expr 	-> [[Type, SyntCat Op, Type],
+				[Type]]
+	Op		-> [[plus],
+				[minus],
+				[times],
+				[divide],
+				[notSym]]
+	Type	-> [[Nmbr],
+				[Bool],
+				[idf]]
+	Nmbr 	-> [[SyntCat Nmbr]]
+	Bool 	-> [[SyntCat Bool]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -50,7 +62,6 @@ times   = Symbol "*"
 divide  = Symbol "/"
 notSym  = Symbol "~"
 colon   = Symbol ":"
-star	= Symbol "*"
 
 {-
 data State = START | ERROR | KW | SYM | NUM | IDF | BOOL | COMMENT | KWW
@@ -96,13 +107,15 @@ tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
 tokenizer s (' ':xs) = tokenizer s xs
 tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
+tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
+tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW (x:xs)
-	| isBoolean (x:restWord)	= (Bool, x:restWord) : tokenizer KW restString
-	| isKeyword (x:restWord) 	= (Keyword (x:restWord), x:restWord): tokenizer KW restString
+	| isBoolean (x:restWord)						= (Bool, x:restWord) : tokenizer KW restString
+	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
+	| elem x "+-*/"									= (Op, [x]): tokenizer KW (restWord ++ restString) 
 	| all (==True) (map isNumber (x:restWord))		= (Nmbr, x:restWord): tokenizer KW restString
-	| x == '{' = (lcbr, [x]): tokenizer KW xs
-	| x == '}' = (rcbr, [x]): tokenizer KW xs
-	| otherwise				= (Keyword "var", (x:restWord)): tokenizer KW restString
+	| (x:restWord == getEndmark)					= (endmark, x:restWord): tokenizer KW restString
+	| otherwise										= (Idf, (x:restWord)): tokenizer KW restString
 	where
 		restWord = getWord xs
 		restString = getRest xs
@@ -118,14 +131,21 @@ isBoolean word
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| x == ' '  = ""
+	| x == ',' = ""
+	| x == ' ' && startsWith "Arrr!" xs = " Arrr!"
+	| elem x " ,+-*/" = ""
 	| otherwise = x: getWord xs
 
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| x == ' '  = xs
+	| x == ' ' && startsWith "Arrr!" xs = getRest xs
+	| x == ' ' = xs
+	| elem x ",{}+-*/" = x:xs
 	| otherwise = getRest xs
+
+getEndmark :: String
+getEndmark = ", Arrr!"
 
 allKeywords :: [String]
 allKeywords = ["fleet", "ship", "avast", "be", "lower", "higher", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
@@ -173,3 +193,23 @@ sampleFunction = concat ["fleet SampleFunction {",
 						 "   }",
 						 "}"
 						]
+
+test = concat ["fleet Prog {",
+			   "    booty a be 1, Arrr!",
+			   "    booty chest be Aye, Arrr!",
+			   "    booty b be 2+3, Arrr!",
+			   "    booty c be a+b, Arrr!",
+			   "}"
+			   ]
+
+tokens = tokenizer START
+
+test0 = parse grammar Program $ tokens test
+
+showTestTree = showRoseTree $ toRoseTree1 test0
+
+printTupList :: [(Alphabet, String)] -> IO String
+printTupList [t] = do return (show t)
+printTupList (t:tup) = do
+						putStrLn (show t)
+						printTupList tup

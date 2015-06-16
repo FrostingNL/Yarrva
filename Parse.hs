@@ -28,6 +28,8 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Idf
 		| Nmbr
 		| Bool
+		| Type
+		| Op
 
 		deriving (Eq,Show)
 
@@ -104,30 +106,30 @@ parserGen _  _  ( _ , _,  []  ) = []
 parserGen gr (nt:rule) (nt0,ts,(cat,str):tokens)
  = case nt of
 	Symbol str'	->  (if (str==str')
-				then -- traceShow ("success: " ++ str)
+				then traceShow ("success: " ++ str)
                                      (parserGen gr rule (nt0,ts,tokens))
-				else -- traceShow ("expected: " ++ str' ++ " -- found: " ++ str)
+				else traceShow (" expected: " ++ str' ++ " -- found: " ++ str)
 				     []
 				)
 
 	Keyword str'	->  (if (str==str')
-				then -- traceShow ("success: " ++ str)
+				then traceShow ("success: " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str)], tokens))
-				else -- traceShow ("expected: " ++ str' ++ " -- found: " ++ str)
+				else traceShow ("expected: " ++ str' ++ " -- found: " ++ str)
 				     []
 				)
 
 	SyntCat cat'	->  (if (cat==cat')
-				then -- traceShow ("success: " ++ show cat ++ " " ++ str)
+				then traceShow ("success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str)], tokens))
-				else -- traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
+				else traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
 
 	CheckToken p	->  (if (p (cat,str))
-				then -- traceShow ("success: " ++ show cat ++ " " ++ str)
+				then traceShow ("success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str)], tokens))
-				else -- traceShow ("expected: some property (...) -- found: " ++ show cat ++ " " ++ str)
+				else traceShow ("expected: some property (...) -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
 
@@ -151,7 +153,8 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str):tokens)
 
 
 
-	_		->     [  (t2,tokens2)	| r <- gr nt
+	_		->    	--trace (show ((cat,str))) $
+					[  (t2,tokens2)	| r <- gr nt
 					   	, (t1,tokens1) <- parserGen gr r (nt,[],(cat,str):tokens)
 					   	, (t2,tokens2) <- parserGen gr rule (nt0,ts++[t1],tokens1)
 					   	]
