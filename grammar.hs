@@ -52,6 +52,42 @@ notSym  = Symbol "~"
 colon   = Symbol ":"
 star	= Symbol "*"
 
+{-
+data State = START | ERROR | KW | SYM | NUM | IDF | BOOL | COMMENT | KWW
+
+tokenizer :: State -> String -> String -> [Token]
+tokenizer _ [] word = []
+tokenizer ERROR search word = (trace search) error "Shiver me timbers! You done it wrong."
+tokenizer START (x:xs) _    
+	| length (checkKeywords [x]) >= 1 = tokenizer KW (x:xs) ""
+	| otherwise = tokenizer ERROR xs ""
+tokenizer KW (x:xs) word  
+	| length possibleKeywords > 1 						= tokenizer KW xs newWord
+	| length possibleKeywords == 1 && startsWith " " xs = tokenizer KWW (tail xs) newWord
+	| length possibleKeywords == 1 && xs == [] 			= [(Keyword newWord, newWord)]
+	| length possibleKeywords == 1 						= tokenizer KW xs newWord
+	| length possibleKeywords == 0 						= tokenizer ERROR xs word
+	| otherwise 										= tokenizer ERROR xs word
+	where 
+		possibleKeywords = checkKeywords newWord
+		newWord = word ++ [x]
+tokenizer KWW (x:xs) word
+	| x == '(' = tokenizer ERROR [] word
+    | otherwise = (Keyword word, getWord (x:xs)) : tokenizer START (rmWord xs) ""
+
+rmWord :: String -> String
+rmWord [] = []
+rmWord (x:xs) 
+	| x == ' ' = []
+	| otherwise = rmWord xs
+
+getWord :: String -> String
+getWord [] = []
+getWord (x:xs)
+	| x /= ' ' = x : getWord xs
+	| otherwise = []
+-}
+
 data State = START | ERROR | KW | KWWORD
 
 tokenizer :: State -> String -> [Token]
@@ -61,15 +97,21 @@ tokenizer s (' ':xs) = tokenizer s xs
 tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
 tokenizer KW (x:xs)
-	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
+	| isBoolean (x:restWord)	= (Bool, x:restWord) : tokenizer KW restString
+	| isKeyword (x:restWord) 	= (Keyword (x:restWord), x:restWord): tokenizer KW restString
 	| all (==True) (map isNumber (x:restWord))		= (Nmbr, x:restWord): tokenizer KW restString
-	| otherwise										= (Keyword "var", (x:restWord)): tokenizer KW restString
+	| otherwise				= (Keyword "var", (x:restWord)): tokenizer KW restString
 	where
 		restWord = getWord xs
 		restString = getRest xs
 
 isKeyword :: String -> Bool
 isKeyword s = elem s allKeywords
+
+isBoolean :: String -> Bool
+isBoolean word 
+	| word == "Aye" || word == "Nay" = True
+	| otherwise = False
 
 getWord :: String -> String
 getWord [] = []
