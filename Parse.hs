@@ -25,6 +25,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Program
 		| Stat
 		| Expr
+		| BoolExpr
 		| Idf
 		| Nmbr
 		| Bool

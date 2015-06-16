@@ -7,7 +7,12 @@ import FPPrac.Trees
 grammar :: Grammar
 grammar nt = case nt of
 	Program -> [[progKey, idf, lcbr, Rep0 [Stat], rcbr]]
-	Stat 	-> [[varKey, idf, equalsKey, Expr, endmark]]
+	Stat 	-> [[varKey, idf, equalsKey, Expr, endmark],
+				[ifExprKey, lpar, BoolExpr, rpar, lcbr, Rep0 [Stat], rcbr]]
+	BoolExpr-> [[Expr, equalsKey, Expr],
+				[Bool],
+				[idf],
+				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 
 	Expr 	-> [[Type, SyntCat Op, Type],
 				[Type]]
 	Op		-> [[plus],
@@ -38,6 +43,8 @@ printKey	= Keyword "parrot"
 continueKey = Keyword "God's speed"
 whileKey	= Keyword "whirlpool"
 forKey		= Keyword "navigate"
+orKey		= Keyword "or"
+andKey		= Keyword "and"
 endmark		= Keyword ", Arrr!"
 
 lpar    = Symbol "("
@@ -69,6 +76,8 @@ tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
+tokenizer KW ('(':xs) = (lpar, ['(']): tokenizer KW xs
+tokenizer KW (')':xs) = (rpar, [')']): tokenizer KW xs
 tokenizer KW (x:xs) 
 	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
@@ -103,13 +112,13 @@ getNum (x:xs)
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| elem x " +-*/," = []
+	| elem x " +-*/,()" = []
 	| otherwise = x: getWord xs
 
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| elem x ",+-*/" = (x:xs)
+	| elem x ",+-*/()" = (x:xs)
 	| x == ' ' = xs
 	| otherwise = getRest xs
 
@@ -167,7 +176,9 @@ test = concat ["fleet Prog {",
 			   "    booty a be 1, Arrr!",
 			   "    booty chest be Aye, Arrr!",
 			   "    booty b be 2+3, Arrr!",
-			   "    booty c be a+b, Arrr!",
+			   "    parley (b be a) {",
+			   "        booty c be 1, Arrr!",
+			   "    }",
 			   "}"
 			   ]
 
