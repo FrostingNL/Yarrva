@@ -103,13 +103,13 @@ getNum (x:xs)
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| x == ' ' = []
+	| elem x " +-*/," = []
 	| otherwise = x: getWord xs
 
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| x == ',' = (x:xs)
+	| elem x ",+-*/" = (x:xs)
 	| x == ' ' = xs
 	| otherwise = getRest xs
 
