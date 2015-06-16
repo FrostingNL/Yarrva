@@ -8,7 +8,7 @@ grammar :: Grammar
 grammar nt = case nt of
 	Program -> [[progKey, idf, Block]]
 	Stat 	-> [[Opt [varKey], idf, equalsKey, Expr, endmark],
-				[ifExprKey, lpar, BoolExpr, rpar, Block],
+				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],
 				[whileKey, lpar, BoolExpr, rpar, Block],
 				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]
@@ -33,9 +33,9 @@ grammar nt = case nt of
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 returnKey 	= Keyword "avast"
-equalsKey 	= Keyword "be"		-- n be a
-lesserKey	= Keyword "lower"	-- n be lower a
-greaterKey	= Keyword "higher"	-- n be higher a
+equalsKey 	= Keyword "be"	
+lesserKey	= Keyword "lower"
+greaterKey	= Keyword "higher"
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 varKey 		= Keyword "booty"
