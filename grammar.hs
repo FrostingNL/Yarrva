@@ -4,13 +4,6 @@ import Data.List
 import Debug.Trace
 import FPPrac.Trees
 
-{-
-TO-DO:
-	- Tokenizer
-	- Testing (/w GUI)
-	- Do the rest
--}
-
 grammar :: Grammar
 grammar nt = case nt of
 	Program -> [[progKey, idf, lcbr, Rep0 [Stat], rcbr]]
@@ -63,63 +56,31 @@ divide  = Symbol "/"
 notSym  = Symbol "~"
 colon   = Symbol ":"
 
-{-
-data State = START | ERROR | KW | SYM | NUM | IDF | BOOL | COMMENT | KWW
-
-tokenizer :: State -> String -> String -> [Token]
-tokenizer _ [] word = []
-tokenizer ERROR search word = (trace search) error "Shiver me timbers! You done it wrong."
-tokenizer START (x:xs) _    
-	| length (checkKeywords [x]) >= 1 = tokenizer KW (x:xs) ""
-	| otherwise = tokenizer ERROR xs ""
-tokenizer KW (x:xs) word  
-	| length possibleKeywords > 1 						= tokenizer KW xs newWord
-	| length possibleKeywords == 1 && startsWith " " xs = tokenizer KWW (tail xs) newWord
-	| length possibleKeywords == 1 && xs == [] 			= [(Keyword newWord, newWord)]
-	| length possibleKeywords == 1 						= tokenizer KW xs newWord
-	| length possibleKeywords == 0 						= tokenizer ERROR xs word
-	| otherwise 										= tokenizer ERROR xs word
-	where 
-		possibleKeywords = checkKeywords newWord
-		newWord = word ++ [x]
-tokenizer KWW (x:xs) word
-	| x == '(' = tokenizer ERROR [] word
-    | otherwise = (Keyword word, getWord (x:xs)) : tokenizer START (rmWord xs) ""
-
-rmWord :: String -> String
-rmWord [] = []
-rmWord (x:xs) 
-	| x == ' ' = []
-	| otherwise = rmWord xs
-
-getWord :: String -> String
-getWord [] = []
-getWord (x:xs)
-	| x /= ' ' = x : getWord xs
-	| otherwise = []
--}
-
 data State = START | ERROR | KW | KWWORD
 
 tokenizer :: State -> String -> [Token]
 tokenizer _ [] = []
-tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
 tokenizer s (' ':xs) = tokenizer s xs
+
+tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
+
 tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
+
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW (x:xs) 
-	| (x:xs) == getEndmark 							= (endmark, x:xs): tokenizer KW (rmEndMark (x:xs))
-	| isBoolean (x:restWord)						= (Bool, x:restWord) : tokenizer KW restString
-	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
-	| elem x "+-*/"									= (Op, [x]): tokenizer KW (restWord ++ restString) 
-	| isNumber x									= (Nmbr, x:restNumber): tokenizer KW restString
-	| otherwise										= (Idf, (x:restWord)): tokenizer KW restString
+	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 						tokenizer KW (rmEndMark (x:xs))
+	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
+	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
+	| elem x "+-*/"									= (Op, [x]):							tokenizer KW (restWord ++ restString) 
+	| isNumber x									= (Nmbr, x:restNumber): 				otherTokens
+	| otherwise										= (Idf, (x:restWord)): 					otherTokens
 	where
-		restNumber = getNum xs
-		restWord = getWord xs
-		restString = getRest xs
+		restNumber 	= getNum xs
+		restWord 	= getWord xs
+		restString 	= getRest xs
+		otherTokens = tokenizer KW restString
 
 rmEndMark :: String -> String
 rmEndMark [] = []
