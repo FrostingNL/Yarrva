@@ -1,4 +1,6 @@
 import Parse
+import Data.Char
+import Data.List
 import Debug.Trace
 
 {-
@@ -31,6 +33,7 @@ printKey	= Keyword "parrot"
 continueKey = Keyword "God's speed"
 whileKey	= Keyword "whirlpool"
 forKey		= Keyword "navigate"
+endmark		= Keyword ", Arrr!"
 
 lpar    = Symbol "("
 rpar    = Symbol ")"
@@ -46,31 +49,38 @@ minus   = Symbol "-"
 times   = Symbol "*"
 divide  = Symbol "/"
 notSym  = Symbol "~"
-endmark = Symbol "!"
 colon   = Symbol ":"
 star	= Symbol "*"
 
-data State = START | ERROR | KW | SY | NUM | IDF | BOOL | COMMENT
+data State = START | ERROR | KW | KWWORD
 
-tokenizer :: State -> String -> String -> [Token]
-tokenizer _ [] word = []
-tokenizer ERROR _ _ = error "Shiver me timbers! You done it wrong."
-tokenizer START (x:xs) _    
-	| length (checkKeywords [x]) >= 1 = tokenizer KW (x:xs) ""
-	| otherwise = tokenizer ERROR xs ""
-tokenizer KW (x:xs) word    
-	| length possibleKeywords > 1 						= tokenizer KW xs newWord
-	| length possibleKeywords == 1 && startsWith " " xs = (Keyword newWord, newWord): tokenizer START (tail xs) ""
-	| length possibleKeywords == 1 && xs == [] 			= [(Keyword newWord, newWord)]
-	| length possibleKeywords == 1 						= tokenizer KW xs newWord
-	| length possibleKeywords == 0 						= tokenizer ERROR xs word
-	| otherwise 										= tokenizer ERROR xs word
-	where 
-		possibleKeywords = checkKeywords newWord
-		newWord = word ++ [x]
+tokenizer :: State -> String -> [Token]
+tokenizer _ [] = []
+tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
+tokenizer s (' ':xs) = tokenizer s xs
+tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
+					   | otherwise = tokenizer ERROR (x:xs)
+tokenizer KW (x:xs)
+	| isKeyword (x:restWord) 	= (Keyword (x:restWord), x:restWord): tokenizer KW restString
+	| otherwise				= (Keyword "var", (x:restWord)): tokenizer KW restString
+	where
+		restWord = getWord xs
+		restString = getRest xs
 
-checkKeywords ::  String -> [String]
-checkKeywords possibleToken = [x | x <- allKeywords, startsWith possibleToken x]
+isKeyword :: String -> Bool
+isKeyword s = elem s allKeywords
+
+getWord :: String -> String
+getWord [] = []
+getWord (x:xs)
+	| x == ' '  = ""
+	| otherwise = x: getWord xs
+
+getRest :: String -> String
+getRest [] = []
+getRest (x:xs)
+	| x == ' '  = xs
+	| otherwise = getRest xs
 
 allKeywords :: [String]
 allKeywords = ["fleet", "ship", "avast", "be", "lower", "higher", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
@@ -83,38 +93,38 @@ startsWith (s:search) (w:word)
 	| otherwise = False
 
 sampleProgram = concat ["fleet Sample {",
-						"   booty a be 3!",
-						"   booty b be 6!",
-						"   booty c be a+b!",
-						"   booty d be Aye!",
-						"   parlay(d) { *: This is a comment Arr.",
-						"      parrot c!",
+						"   booty a be 3, Arrr!",
+						"   booty b be 6, Arrr!",
+						"   booty c be a+b, Arrr!",
+						"   booty d be Aye, Arrr!",
+						"   parlay(d) { *: This is a comment.",
+						"      parrot c, Arrr!",
 						"   }",
 						"   heave ho {",
-						"      parrot Nay!",
+						"      parrot Nay, Arrr!",
 						"   }",
 						"   whirlpool(d) {",
 						"      parlay(c be 10) {",
-						"         belay!",
+						"         belay, Arrr!",
 						"      }",
-						"      c be c + 1!",
+						"      c be c + 1, Arrr!",
 						"   }",
 						"}"						
 						]
 
 helloWorld = concat ["fleet HelloWorld {",
-					 "   parrot \"Ahoy World!\" !",
+					 "   parrot \"Ahoy World!\", Arrr!",
 					 "}"
 					]
 
 sampleFunction = concat ["fleet SampleFunction {",
 						 "   ship add3(booty i) {",
-						 "      avast i + 3!",
+						 "      avast i + 3, Arrr!",
 						 "   }",
 						 "   ",
 						 "   flagship() {",
-						 "      booty a be add3(5)!",
-						 "      parrot a!",
+						 "      booty a be add3(5), Arrr!",
+						 "      parrot a, Arrr!",
 						 "   }",
 						 "}"
 						]
