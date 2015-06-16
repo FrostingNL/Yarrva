@@ -50,7 +50,7 @@ endmark = Symbol "!"
 colon   = Symbol ":"
 star	= Symbol "*"
 
-data State = START | ERROR | KW | SY | NUM | IDF | BOOL | COMMENT
+data State = START | ERROR | KW | SYM | NUM | IDF | BOOL | COMMENT | KWW
 
 tokenizer :: State -> String -> String -> [Token]
 tokenizer _ [] word = []
@@ -58,14 +58,31 @@ tokenizer ERROR search word = (trace search) error "Shiver me timbers! You done 
 tokenizer START (x:xs) _    
 	| length (checkKeywords [x]) >= 1 = tokenizer KW (x:xs) ""
 	| otherwise = tokenizer ERROR xs ""
-tokenizer KW (x:xs) word    
-	| length possibleKeywords > 1 || (length possibleKeywords == 1 && not (startsWith " " xs)) = tokenizer KW xs newWord
-	| length possibleKeywords == 1 && (startsWith " " xs || xs == []) = (Keyword newWord, newWord): tokenizer START (tail xs) ""
-	| length possibleKeywords == 0 = tokenizer ERROR xs word
-	| otherwise = tokenizer ERROR xs word
+tokenizer KW (x:xs) word  
+	| length possibleKeywords > 1 						= tokenizer KW xs newWord
+	| length possibleKeywords == 1 && startsWith " " xs = tokenizer KWW (tail xs) newWord
+	| length possibleKeywords == 1 && xs == [] 			= [(Keyword newWord, newWord)]
+	| length possibleKeywords == 1 						= tokenizer KW xs newWord
+	| length possibleKeywords == 0 						= tokenizer ERROR xs word
+	| otherwise 										= tokenizer ERROR xs word
 	where 
 		possibleKeywords = checkKeywords newWord
-		newWord = (word++[x])
+		newWord = word ++ [x]
+tokenizer KWW (x:xs) word
+	| x == '(' = tokenizer ERROR [] word
+    | otherwise = (Keyword word, getWord (x:xs)) : tokenizer START (rmWord xs) ""
+
+rmWord :: String -> String
+rmWord [] = []
+rmWord (x:xs) 
+	| x == ' ' = []
+	| otherwise = rmWord xs
+
+getWord :: String -> String
+getWord [] = []
+getWord (x:xs)
+	| x /= ' ' = x : getWord xs
+	| otherwise = []
 
 checkKeywords ::  String -> [String]
 checkKeywords possibleToken = [x | x <- allKeywords, startsWith possibleToken x]
