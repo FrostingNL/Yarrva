@@ -100,6 +100,8 @@ tokenizer KW (x:xs)
 	| isBoolean (x:restWord)	= (Bool, x:restWord) : tokenizer KW restString
 	| isKeyword (x:restWord) 	= (Keyword (x:restWord), x:restWord): tokenizer KW restString
 	| all (==True) (map isNumber (x:restWord))		= (Nmbr, x:restWord): tokenizer KW restString
+	| x == '{' = (lcbr, [x]): tokenizer KW xs
+	| x == '}' = (rcbr, [x]): tokenizer KW xs
 	| otherwise				= (Keyword "var", (x:restWord)): tokenizer KW restString
 	where
 		restWord = getWord xs
