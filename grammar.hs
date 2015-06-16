@@ -70,12 +70,12 @@ tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
 tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW (x:xs) 
-	| startsWith getEndmark (x:xs)					= (endmark, x:xs): tokenizer KW (rmEndMark (x:xs))
-	| isBoolean (x:restWord)						= (Bool, x:restWord) : tokenizer KW restString
-	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): tokenizer KW restString
-	| elem x "+-*/"									= (Op, [x]): tokenizer KW (restWord ++ restString) 
-	| isNumber x									= (Nmbr, x:restNumber): tokenizer KW restString
-	| otherwise										= (Idf, (x:restWord)): tokenizer KW restString
+	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
+	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
+	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
+	| elem x "+-*/"									= (Op, [x]):							tokenizer KW (restWord ++ restString) 
+	| isNumber x									= (Nmbr, x:restNumber): 				otherTokens
+	| otherwise										= (Idf, (x:restWord)): 					otherTokens
 	where
 		restNumber 	= getNum xs
 		restWord 	= getWord xs
