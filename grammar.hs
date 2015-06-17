@@ -9,18 +9,24 @@ grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
 	Stat 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark],										-- Var declaration
-				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],									-- If Expression
+				[ifExprKey, lpar, BoolExpr, rpar, Block],														-- If Expression
+				[elseKey, Block],																				-- Else Expression
+				[printKey, Expr, NoCat endmark],																-- Print Expression
+				[incKey, Type, NoCat endmark],
+				[decKey, Type, NoCat endmark],
 				[forKey, lpar, Assign, point, BoolExpr, point, Expr, rpar, Block],								-- For Expression
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
-				[returnKey, Opt [Expr], endmark],																-- Return Expression
-				[functionKey, idf, lpar, Opt [FuncVal, Rep0 [comma, FuncVal]], rpar, Block],					-- Normal Function
+				[Func, endmark],
+				[returnKey, Opt [Expr], NoCat endmark],															-- Return Expression
+				[functionKey, idf, lpar, FValues, rpar, Block],													-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
 	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
-	Expr 	-> [[Type, SyntCat Op, Type],																		-- An expression
+	Expr 	-> [[Opt [lpar], Expr2, Opt [rpar]]]
+	Expr2 	-> [[Type, SyntCat Op, Type],																		-- An expression
 				[incKey, Type],																					-- Increase Type by 1
 				[decKey, Type],																					-- Decrease Type by 1
 				[Type]]																							-- One of the types
@@ -31,11 +37,14 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[notSym]]																						-- Self Explanatory
 	Type	-> [[SyntCat Nmbr],																					-- A number
 				[SyntCat Bool],																					-- A boolean
-				[idf]]																							-- An identifier
+				[idf],																							-- An identifier
+				[Func]]
 	TypeName-> [[Keyword "Doubloon"],																			-- The name of the Type Number
 				[Keyword "Bool"]]																				-- The name of the Type Boolean
+	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[varKey, idf, equalsKey, TypeName]]																-- The variable you can use in a function decleration
-	Assign 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr]]
+	Assign 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr]]														-- Assign decleration
+	Func 	-> [[idf, lpar, Opt [Expr, Rep0 [NoCat comma, Expr]], rpar]]																	-- Function
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -48,8 +57,7 @@ trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 varKey 		= Keyword "booty"
 ifExprKey	= Keyword "parley"
-elseifKey	= Keyword "heave to"
-elseKey 	= Keyword "heave ho"
+elseKey 	= Keyword "heave"
 breakKey	= Keyword "belay"
 printKey	= Keyword "parrot"
 continueKey = Keyword "God's speed"
@@ -97,6 +105,7 @@ tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW ('(':xs) = (lpar, ['(']): tokenizer KW xs
 tokenizer KW (')':xs) = (rpar, [')']): tokenizer KW xs
 tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
+tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
 tokenizer KW (x:xs) 
 	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
@@ -145,7 +154,7 @@ getEndmark :: String
 getEndmark = ", Arrr!"
 
 allKeywords :: [String]
-allKeywords = ["fleet", "ship", "avast", "be", "below", "above", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+allKeywords = ["fleet", "flagship", "ship", "avast", "be", "below", "above", "Aye", "Nay", "booty", "parley", "heave", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
 
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
@@ -154,33 +163,13 @@ startsWith (s:search) (w:word)
 	| s == w = startsWith search word
 	| otherwise = False
 
-sampleProgram = concat ["fleet Sample {",
-						"   booty a be 3, Arrr!",
-						"   booty b be 6, Arrr!",
-						"   booty c be a+b, Arrr!",
-						"   booty d be Aye, Arrr!",
-						"   parlay(d) { *: This is a comment.",
-						"      parrot c, Arrr!",
-						"   }",
-						"   heave ho {",
-						"      parrot Nay, Arrr!",
-						"   }",
-						"   whirlpool(d) {",
-						"      parlay(c be 10) {",
-						"         belay, Arrr!",
-						"      }",
-						"      c be c + 1, Arrr!",
-						"   }",
-						"}"						
-						]
-
 helloWorld = concat ["fleet HelloWorld {",
 					 "   parrot \"Ahoy World!\", Arrr!",
 					 "}"
 					]
 
 sampleFunction = concat ["fleet SampleFunction {",
-						 "   ship add3(booty i) {",
+						 "   ship add3(booty i be Doubloon, booty a be Bool) {",
 						 "      avast i + 3, Arrr!",
 						 "   }",
 						 "   ",
@@ -204,11 +193,8 @@ test = concat ["fleet Prog {",
 			   "}"
 			   ]
 
-test2 = concat ["fleet Prog {",
-				"   ship Func(booty n be Int, booty b be Bool) {",
-				"       booty a be 2, Arrr!",
-				"       avast a, Arrr!",
-				"   }",
+test2 = concat ["fleet Fib {",
+				"    countDown(a,b), Arrr!",
 				"}"
 				]
 
@@ -230,23 +216,32 @@ file :: FilePath -> IO ()
 file f = do  
 	handle <- openFile f ReadMode  
 	contents <- hGetContents handle
-	showRoseTree $ toRoseTree1 $ parse grammar Program $ tokens contents
+	showRoseTreeList [toRoseTree1 $ parse grammar Program $ tokens contents, toRTree $ convert $ parse grammar Program $ tokens contents]
 
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) = VarNode s
 convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: x':[]))						= BootyNode (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode s (convert x) (convert x')
-convert (PNode _ [PLeaf (a, s)])														= VarNode s
+convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
+convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
+																						| otherwise 		= VarNode s
 convert (PNode _ [node])																= convert node
-convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode s (convert x) (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode 	(convert x) (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "heave", s)): (PNode Block xs): []))					= ElseNode  (map convert xs)
 convert (PNode _ (x: (PLeaf (Keyword "be",s)): x': []))									= BoolExNode $ Comp s (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Keyword "below",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Keyword "above",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ ((PLeaf (Keyword "navigate", s)): x: x': x'': (PNode Block xs): []))	= ForNode s (convert x) (convert x') (convert x'') (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "whirlpool", s)): x: (PNode Block xs): []))			= WhileNode s (convert x) (map convert xs)
-convert (PNode Program (x:(PLeaf (a,s)):(PNode Block xs):[]))							= ZupaNode s (map convert xs)
-convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode (convert x)
+convert (PNode _ ((PLeaf (Keyword "navigate", s)): x: x': x'': (PNode Block xs): []))	= ForNode 	(convert x) (convert x') (convert x'') (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "whirlpool", s)): x: (PNode Block xs): []))			= WhileNode (convert x) (map convert xs)
+convert (PNode Program (x:(PLeaf (a,s)):(PNode Block xs):[]))							= ZupaNode 	s (map convert xs)
+convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode 	(convert x)
 convert (PNode _ ((PLeaf (Idf, "plunder")):x:[])) 										= PlunderNode (convert x)
+convert (PNode _ ((PLeaf (Keyword "ship", _)): (PLeaf (Idf, s)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
+convert (PNode _ ((PLeaf (Keyword "flagship", s)): (PNode Block xs): []))				= FuncNode 	s [] (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: _: x':[]))						= FuncValNode (convert x) (convert x')
+convert (PNode _ ((PLeaf (Keyword "parrot", s)): x: []))								= PrintNode (convert x)
+convert (PNode _ ((PLeaf (Keyword "avast", s)): x: []))									= ReturnNode s (convert x)
+convert (PNode Func ((PLeaf (Idf, s)): xs))												= DoFuncNode s (map convert xs)
+convert (PNode _ (x: x': []))															= BootyNode (convert x) (convert x')
 
 data Tree = VarNode 	String
 		  | BootyNode 	Tree Tree
@@ -254,9 +249,15 @@ data Tree = VarNode 	String
 		  | BoolExNode 	BoolEx
 		  | GiftNode	Tree
 		  | PlunderNode Tree
-		  | IfNode		String Tree [Tree]
-		  | ForNode		String Tree Tree Tree [Tree]
-		  | WhileNode	String Tree [Tree]
+		  | IfNode		Tree [Tree]
+		  | ElseNode	[Tree]
+		  | ForNode		Tree Tree Tree [Tree]
+		  | WhileNode	Tree [Tree]
+		  | FuncNode 	String [Tree] [Tree]
+		  | FuncValNode	Tree Tree
+		  | PrintNode	Tree
+		  | ReturnNode	String Tree
+		  | DoFuncNode	String [Tree]
 		  | ZupaNode	String [Tree]
 		  deriving (Eq, Show)
 
@@ -272,9 +273,15 @@ toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Boolean t1)) 	= RoseNode "boolean" [toRTree t1]
 toRTree (GiftNode t1)				= RoseNode "inc" [toRTree t1]
 toRTree (PlunderNode t1)			= RoseNode "dec" [toRTree t1]
-toRTree (IfNode s t1 list)			= RoseNode "if" (map toRTree (t1:list))
-toRTree (ForNode s t1 t2 t3 list)	= RoseNode "for" (map toRTree (t1:t2:t3:list))
-toRTree (WhileNode s t1 list)		= RoseNode "while" (map toRTree (t1:list))
+toRTree (IfNode t1 list)			= RoseNode "if" (map toRTree (t1:list))
+toRTree (ElseNode list)				= RoseNode "else" (map toRTree (list))
+toRTree (ForNode t1 t2 t3 list)		= RoseNode "for" (map toRTree (t1:t2:t3:list))
+toRTree (WhileNode t1 list)			= RoseNode "while" (map toRTree (t1:list))
+toRTree (FuncNode s list1 list2)	= RoseNode s (map toRTree (list1 ++ list2))
+toRTree (FuncValNode t1 t2)			= RoseNode "val" [toRTree t1, toRTree t2]
+toRTree (PrintNode t1)				= RoseNode "print" [toRTree t1]
+toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
+toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test0
+showConvertedTree = showRoseTree $ toRTree $ convert test1

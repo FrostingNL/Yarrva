@@ -1,0 +1,16 @@
+fleet Program {	
+	ship countDown(booty n be Doubloon, booty m be Doubloon) {
+		booty c be n +m, Arrr!
+		whirlpool(c above 0) {
+			parrot c, Arrr!
+			plunder c, Arrr!
+		}
+		avast (n+m), Arrr!
+	}
+	
+	flagship() {
+		booty a be 5, Arrr!
+		booty b be 15, Arrr!
+		parrot (countDown(a.b)), Arrr!
+	}
+} 

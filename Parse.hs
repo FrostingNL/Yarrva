@@ -26,6 +26,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Program
 		| Stat
 		| Expr
+		| Expr2
 		| Block
 		| BoolExpr
 		| Idf
@@ -36,6 +37,8 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Op
 		| FuncVal
 		| Assign
+		| Func
+		| FValues
 
 		deriving (Eq,Show)
 
