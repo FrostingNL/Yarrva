@@ -145,7 +145,7 @@ getEndmark :: String
 getEndmark = ", Arrr!"
 
 allKeywords :: [String]
-allKeywords = ["fleet", "ship", "avast", "be", "lower", "higher", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+allKeywords = ["fleet", "ship", "avast", "be", "below", "above", "Aye", "Nay", "booty", "parley", "heave to", "heave ho", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
 
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
@@ -247,7 +247,9 @@ convert (PNode _ (x: (PLeaf (Keyword "below",s)): x': []))								= BoolExNode $
 convert (PNode _ (x: (PLeaf (Keyword "above",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
 convert (PNode _ ((PLeaf (Keyword "navigate", s)): x: x': x'': (PNode Block xs): []))	= ForNode s (convert x) (convert x') (convert x'') (map convert xs)
 convert (PNode _ ((PLeaf (Keyword "whirlpool", s)): x: (PNode Block xs): []))			= WhileNode s (convert x) (map convert xs)
-convert (PNode _ list) = (map convert list)!!2
+convert (PNode Program (x:x':(PNode Block xs):[]))										= ZupaNode ((convert x') : (map convert xs))	
+convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode (convert x)
+convert (PNode _ ((PLeaf (Idf, "plunder")):x:[])) 										= PlunderNode (convert x)
 
 data Tree = TypeNode 	String String
 		  | BootyNode 	Tree Tree
