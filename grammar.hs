@@ -8,15 +8,15 @@ import System.IO
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
-	Stat 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark],													-- Var declaration
+	Stat 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark],										-- Var declaration
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],									-- If Expression
-				[forKey, lpar, Assign, point, BoolExpr, point, Expr, rpar, Block],	-- For Expression
+				[forKey, lpar, Assign, point, BoolExpr, point, Expr, rpar, Block],								-- For Expression
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
 				[returnKey, Opt [Expr], endmark],																-- Return Expression
 				[functionKey, idf, lpar, Opt [FuncVal, Rep0 [comma, FuncVal]], rpar, Block],					-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
-	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
+	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
