@@ -32,6 +32,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Idf
 		| Nmbr
 		| Bool
+		| String
 		| Type
 		| TypeName
 		| Op

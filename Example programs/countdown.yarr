@@ -11,6 +11,6 @@ fleet Program {
 	flagship() {
 		booty a be 5, Arrr!
 		booty b be 15, Arrr!
-		parrot (countDown(a.b)), Arrr!
+		parrot (countDown(a,b)), Arrr!
 	}
 } 

@@ -38,6 +38,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Type	-> [[SyntCat Nmbr],																					-- A number
 				[SyntCat Bool],																					-- A boolean
 				[idf],																							-- An identifier
+				[SyntCat String],
 				[Func]]
 	TypeName-> [[Keyword "Doubloon"],																			-- The name of the Type Number
 				[Keyword "Bool"]]																				-- The name of the Type Boolean
@@ -105,19 +106,40 @@ tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
 tokenizer KW ('(':xs) = (lpar, ['(']): tokenizer KW xs
 tokenizer KW (')':xs) = (rpar, [')']): tokenizer KW xs
 tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
+tokenizer KW (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW xs
 tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
 tokenizer KW (x:xs) 
 	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
+	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
 	| elem x "+-*/"									= (Op, [x]):							tokenizer KW (restWord ++ restString) 
 	| isNumber x									= (Nmbr, x:restNumber): 				otherTokens
 	| otherwise										= (Idf, (x:restWord)): 					otherTokens
 	where
+		restOfString = getString xs
 		restNumber 	= getNum xs
 		restWord 	= getWord xs
 		restString 	= getRest xs
 		otherTokens = tokenizer KW restString
+
+getString :: String -> String
+getString [] 			= []
+getString [x] 			= [x]
+getString ('\\':'"':xs) = '\\': '"': getString (xs)
+getString (x:'"':xs)	= [x, '"']
+getString (x:xs)		= x: getString xs
+
+getRestString :: String -> String
+getRestString [] = []
+getRestString [x] = []
+getRestString (x:x':xs)
+	| x == '\\' && x' == '"' = getRestString xs
+	| x /= '\\' && x' == '"' = xs
+	| otherwise				 = getRestString xs
+
+isString :: String -> Bool
+isString (x:xs) = x == '"' && (xs!!((length xs)-1)) == '"'
 
 rmEndMark :: String -> String
 rmEndMark [] = []
@@ -187,14 +209,14 @@ test = concat ["fleet Prog {",
 			   "        booty c be 1, Arrr!",
 			   "        navigate (booty i be 0. i below 5. gift i) {",
 			   "            booty c be c+1, Arrr!",
-			   "            booty d be Aye, Arrr!",
+			   "            booty d be \"Hello\", Arrr!",
 			   "        }",
 			   "    }",
 			   "}"
 			   ]
 
 test2 = concat ["fleet Fib {",
-				"    countDown(a,b), Arrr!",
+				"    booty a be \"Hello\", Arrr!",
 				"}"
 				]
 
@@ -212,11 +234,17 @@ printTupList (t:tup) = do
 						putStrLn (show t)
 						printTupList tup
 
+fileList :: FilePath -> IO ()
+fileList f = do  
+	handle <- openFile f ReadMode  
+	contents <- hGetContents handle
+	showRoseTreeList [toRoseTree1 $ parse grammar Program $ tokens contents, toRTree $ convert $ parse grammar Program $ tokens contents]
+
 file :: FilePath -> IO ()
 file f = do  
 	handle <- openFile f ReadMode  
 	contents <- hGetContents handle
-	showRoseTreeList [toRoseTree1 $ parse grammar Program $ tokens contents, toRTree $ convert $ parse grammar Program $ tokens contents]
+	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) = VarNode s
@@ -284,4 +312,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test1
+showConvertedTree = showRoseTree $ toRTree $ convert test0
