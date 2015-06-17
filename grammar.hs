@@ -16,7 +16,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[functionKey, idf, lpar, Opt [FuncVal, Rep0 [comma, FuncVal]], rpar, Block],					-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
-	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
+	BoolExpr-> [[Expr, Alt [Alt [equalsKey] [lesserKey]] [greaterKey], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
@@ -41,8 +41,8 @@ functionKey = Keyword "ship"
 mainKey		= Keyword "flagship"
 returnKey 	= Keyword "avast"
 equalsKey 	= Keyword "be"	
-lesserKey	= Keyword "lower"
-greaterKey	= Keyword "higher"
+lesserKey	= Keyword "be lower"
+greaterKey	= Keyword "be higher"
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 varKey 		= Keyword "booty"
