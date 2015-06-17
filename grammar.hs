@@ -9,11 +9,12 @@ grammar :: Grammar
 grammar nt = case nt of
 	Program -> [[progKey, idf, Block]]
 	Stat 	-> [[mainKey, lpar, rpar, Block],
-				[functionKey, idf, lpar, Rep0 [idf], rpar, Block],
+				[functionKey, idf, lpar, Rep0 [varKey, idf, equalsKey, TypeName], rpar, Block],
 				[Opt [varKey], idf, equalsKey, Expr, endmark],
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],
 				[whileKey, lpar, BoolExpr, rpar, Block],
-				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block]]
+				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block],
+				[returnKey, Opt [Expr], endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]
 	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],
 				[Bool],
@@ -27,11 +28,11 @@ grammar nt = case nt of
 				[times],
 				[divide],
 				[notSym]]
-	Type	-> [[Nmbr],
-				[Bool],
+	Type	-> [[SyntCat Nmbr],
+				[SyntCat Bool],
 				[idf]]
-	Nmbr 	-> [[SyntCat Nmbr]]
-	Bool 	-> [[SyntCat Bool]]
+	TypeName-> [[Keyword "Int"],
+				[Keyword "Bool"]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -192,10 +193,19 @@ test = concat ["fleet Prog {",
 			   "        booty c be 1, Arrr!",
 			   "        navigate (booty i be 0. i be lower 5. i++) {",
 			   "            booty c be c+1, Arrr!",
+			   "            booty d be Aye, Arrr!",
 			   "        }",
 			   "    }",
 			   "}"
 			   ]
+
+test2 = concat ["fleet Prog {",
+				"   ship Func() {",
+				"       booty a be 2, Arrr!",
+				"       avast a, Arrr!",
+				"   }",
+				"}"
+				]
 
 tokens = tokenizer START
 
@@ -214,5 +224,4 @@ file f = do
 	handle <- openFile f ReadMode  
 	contents <- hGetContents handle
 	showRoseTree $ toRoseTree1 $ parse grammar Program $ tokens contents
-	printTupList $ tokens contents
 	hClose handle
