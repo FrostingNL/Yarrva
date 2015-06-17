@@ -6,33 +6,35 @@ import FPPrac.Trees
 import System.IO
 
 grammar :: Grammar
-grammar nt = case nt of
-	Program -> [[progKey, idf, Block]]
-	Stat 	-> [[mainKey, lpar, rpar, Block],
-				[functionKey, idf, lpar, Rep0 [varKey, idf, equalsKey, TypeName], rpar, Block],
-				[Opt [varKey], idf, equalsKey, Expr, endmark],
-				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],
-				[whileKey, lpar, BoolExpr, rpar, Block],
-				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block],
-				[returnKey, Opt [Expr], endmark]]
-	Block	-> [[lcbr, Rep0 [Stat], rcbr]]
-	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],
-				[Bool],
-				[idf],
-				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 
-	Expr 	-> [[Type, SyntCat Op, Type],
-				[Type, SyntCat Op, SyntCat Op],
-				[Type]]
-	Op		-> [[plus],
-				[minus],
-				[times],
-				[divide],
-				[notSym]]
-	Type	-> [[SyntCat Nmbr],
-				[SyntCat Bool],
-				[idf]]
-	TypeName-> [[Keyword "Int"],
-				[Keyword "Bool"]]
+grammar nt = case nt of 																			-- The Grammar sorted by occurence
+	Program -> [[progKey, idf, Block]]																			-- The Main Program
+	Stat 	-> [[Opt [varKey], idf, equalsKey, Expr, endmark],													-- Var declaration
+				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],									-- If Expression
+				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block],	-- For Expression
+				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
+				[returnKey, Opt [Expr], endmark],																-- Return Expression
+				[functionKey, idf, lpar, Opt [FuncVal, Rep0 [comma, FuncVal]], rpar, Block],					-- Normal Function
+				[mainKey, lpar, rpar, Block]]																	-- Main Function
+	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
+	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
+				[Bool],																							-- A boolean
+				[idf],																							-- An identifier
+				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
+	Expr 	-> [[Type, SyntCat Op, Type],																		-- An expression
+				[incKey, Type],																					-- Increase Type by 1
+				[decKey, Type],																					-- Decrease Type by 1
+				[Type]]																							-- One of the types
+	Op		-> [[plus],																							-- Self Explanatory
+				[minus],																						-- Self Explanatory
+				[times],																						-- Self Explanatory
+				[divide],																						-- Self Explanatory
+				[notSym]]																						-- Self Explanatory
+	Type	-> [[SyntCat Nmbr],																					-- A number
+				[SyntCat Bool],																					-- A boolean
+				[idf]]																							-- An identifier
+	TypeName-> [[Keyword "Doubloon"],																			-- The name of the Type Number
+				[Keyword "Bool"]]																				-- The name of the Type Boolean
+	FuncVal	-> [[varKey, idf, equalsKey, TypeName]]																-- The variable you can use in a function decleration
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -53,7 +55,9 @@ continueKey = Keyword "God's speed"
 whileKey	= Keyword "whirlpool"
 forKey		= Keyword "navigate"
 orKey		= Keyword "or"
-andKey		= Keyword "and"
+andKey		= Keyword "'n"
+incKey		= Keyword "gift"
+decKey		= Keyword "plunder"
 endmark		= Keyword ", Arrr!"
 
 lpar    = Symbol "("
@@ -72,6 +76,7 @@ divide  = Symbol "/"
 notSym  = Symbol "~"
 colon   = Symbol ":"
 point	= Symbol "."
+comma	= Symbol ","
 
 data State = START | ERROR | KW | KWWORD
 
@@ -191,7 +196,7 @@ test = concat ["fleet Prog {",
 			   "    booty b be 2+3, Arrr!",
 			   "    parley (b be a) {",
 			   "        booty c be 1, Arrr!",
-			   "        navigate (booty i be 0. i be lower 5. i++) {",
+			   "        navigate (booty i be 0. i be lower 5. gift i) {",
 			   "            booty c be c+1, Arrr!",
 			   "            booty d be Aye, Arrr!",
 			   "        }",
@@ -200,7 +205,7 @@ test = concat ["fleet Prog {",
 			   ]
 
 test2 = concat ["fleet Prog {",
-				"   ship Func() {",
+				"   ship Func(booty n be Int, booty b be Bool) {",
 				"       booty a be 2, Arrr!",
 				"       avast a, Arrr!",
 				"   }",
@@ -210,8 +215,10 @@ test2 = concat ["fleet Prog {",
 tokens = tokenizer START
 
 test0 = parse grammar Program $ tokens test
+test1 = parse grammar Program $ tokens test2
 
 showTestTree = showRoseTree $ toRoseTree1 test0
+showTestTree2 = showRoseTree $ toRoseTree1 test1
 
 printTupList :: [(Alphabet, String)] -> IO String
 printTupList [t] = do return (show t)
