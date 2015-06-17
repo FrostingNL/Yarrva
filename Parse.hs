@@ -12,6 +12,7 @@ import FPPrac.Trees
 data Alphabet =	  Symbol     String		-- Token given ("char" specific for this example)
 		| Keyword    String		-- A given string, but included in the parsetree
 		| SyntCat    Alphabet		-- A given string, but included in the parsetree
+		| NoCat		 Alphabet
 		| CheckChar  (Char->Bool)	-- Character should have some property (for tokenizer)
 		| CheckToken (Token->Bool)	-- Token should have some property (for parser)
 
@@ -126,6 +127,14 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str):tokens)
 	SyntCat cat'	->  (if (cat==cat')
 				then traceShow ("success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str)], tokens))
+				else traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
+				     []
+				)
+
+
+	NoCat cat'	->  (if (cat==cat')
+				then traceShow ("success: " ++ show cat ++ " " ++ str)
+				     (parserGen gr rule (nt0, ts, tokens))
 				else traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)

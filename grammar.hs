@@ -8,7 +8,7 @@ import System.IO
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
-	Stat 	-> [[Opt [varKey], idf, equalsKey, Expr, endmark],													-- Var declaration
+	Stat 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark],													-- Var declaration
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],									-- If Expression
 				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block],	-- For Expression
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
@@ -192,7 +192,6 @@ sampleFunction = concat ["fleet SampleFunction {",
 
 test = concat ["fleet Prog {",
 			   "    booty a be 1, Arrr!",
-			   "    booty chest be Aye, Arrr!",
 			   "    booty b be 2+3, Arrr!",
 			   "    parley (b be a) {",
 			   "        booty c be 1, Arrr!",
@@ -231,4 +230,38 @@ file f = do
 	handle <- openFile f ReadMode  
 	contents <- hGetContents handle
 	showRoseTree $ toRoseTree1 $ parse grammar Program $ tokens contents
-	hClose handle
+
+convert :: ParseTree -> Tree
+convert (PLeaf (a, s)) 
+	| elem (show a) ["Idf", "Bool", "Nmbr"] 						= TypeNode (show a) s
+	| otherwise														= ZupaNode []
+
+convert (PNode _ ((PLeaf (Keyword "booty", "booty")):x:x':[]))		= BootyNode (convert x) (convert x')
+convert (PNode _ ((x: (PLeaf (Op,s)): x': [])))						= OpNode s (convert x) (convert x')
+convert (PNode _ [PLeaf (a, s)])									= TypeNode (show a) s
+convert (PNode _ [node])											= convert node
+convert (PNode _ ((PLeaf (Keyword "parley", s)):x:xs))			= IfNode s (convert x) (map convert xs)
+
+convert (PNode _ 
+				((PLeaf (Keyword "navigate", s)):
+
+				)
+		)
+
+convert (PNode _ list) = (map convert list)!!2
+
+data Tree = TypeNode 	String String
+		  | BootyNode 	Tree Tree
+		  | OpNode 		String Tree Tree
+		  | BoolExNode 	BoolEx
+		  | GiftNode	Tree
+		  | PlunderNode Tree
+		  | IfNode		String Tree [Tree]
+		  | ForNode		String Tree Tree Tree [Tree]
+		  | WhileNode	String Tree [Tree]
+		  | ZupaNode	[Tree]
+		  deriving (Eq, Show)
+
+data BoolEx = String Tree Tree
+			| Tree
+			deriving (Eq, Show)
