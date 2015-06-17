@@ -3,14 +3,18 @@ import Data.Char
 import Data.List
 import Debug.Trace
 import FPPrac.Trees
+import System.IO
 
 grammar :: Grammar
 grammar nt = case nt of
 	Program -> [[progKey, idf, Block]]
-	Stat 	-> [[Opt [varKey], idf, equalsKey, Expr, endmark],
+	Stat 	-> [[mainKey, lpar, rpar, Block],
+				[functionKey, idf, lpar, Rep0 [varKey, idf, equalsKey, TypeName], rpar, Block],
+				[Opt [varKey], idf, equalsKey, Expr, endmark],
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],
 				[whileKey, lpar, BoolExpr, rpar, Block],
-				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block]]
+				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block],
+				[returnKey, Opt [Expr], endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]
 	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],
 				[Bool],
@@ -24,14 +28,15 @@ grammar nt = case nt of
 				[times],
 				[divide],
 				[notSym]]
-	Type	-> [[Nmbr],
-				[Bool],
+	Type	-> [[SyntCat Nmbr],
+				[SyntCat Bool],
 				[idf]]
-	Nmbr 	-> [[SyntCat Nmbr]]
-	Bool 	-> [[SyntCat Bool]]
+	TypeName-> [[Keyword "Int"],
+				[Keyword "Bool"]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
+mainKey		= Keyword "flagship"
 returnKey 	= Keyword "avast"
 equalsKey 	= Keyword "be"	
 lesserKey	= Keyword "lower"
@@ -73,6 +78,8 @@ data State = START | ERROR | KW | KWWORD
 tokenizer :: State -> String -> [Token]
 tokenizer _ [] = []
 tokenizer s (' ':xs) = tokenizer s xs
+tokenizer s ('\t':xs) = tokenizer s xs
+tokenizer s ('\n':xs) = tokenizer s xs
 
 tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
 
@@ -186,10 +193,19 @@ test = concat ["fleet Prog {",
 			   "        booty c be 1, Arrr!",
 			   "        navigate (booty i be 0. i be lower 5. i++) {",
 			   "            booty c be c+1, Arrr!",
+			   "            booty d be Aye, Arrr!",
 			   "        }",
 			   "    }",
 			   "}"
 			   ]
+
+test2 = concat ["fleet Prog {",
+				"   ship Func() {",
+				"       booty a be 2, Arrr!",
+				"       avast a, Arrr!",
+				"   }",
+				"}"
+				]
 
 tokens = tokenizer START
 
@@ -202,3 +218,10 @@ printTupList [t] = do return (show t)
 printTupList (t:tup) = do
 						putStrLn (show t)
 						printTupList tup
+
+file :: FilePath -> IO ()
+file f = do  
+	handle <- openFile f ReadMode  
+	contents <- hGetContents handle
+	showRoseTree $ toRoseTree1 $ parse grammar Program $ tokens contents
+	hClose handle

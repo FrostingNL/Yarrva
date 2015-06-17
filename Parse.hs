@@ -31,6 +31,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Nmbr
 		| Bool
 		| Type
+		| TypeName
 		| Op
 
 		deriving (Eq,Show)

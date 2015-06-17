@@ -1,14 +1,14 @@
 fleet Fib {
-	Fib(booty n) {
-		parlay(n be 1) {
-			avast 1!
+	ship fib(booty n be Int) {
+		parley(n be 1) {
+			avast 1, Arrr!
 		}
 		heave ho {
-			avast (fib(n-2) + fib(n-1))!
+			avast (fib(n-2) + fib(n-1)), Arrr!
 		}
 	}
 
-	Flagship() {
-		parrot(fib(5))!
+	flagship() {
+		parrot(fib(5)), Arrr!
 	}
 }
