@@ -234,12 +234,12 @@ file f = do
 
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) 
-	| elem (show a) ["Idf", "Bool", "Nmbr"] 											= TypeNode (show a) s
+	| elem (show a) ["Idf", "Bool", "Nmbr"] 											= VarNode s
 	| otherwise																			= ZupaNode []
 
 convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: x':[]))						= BootyNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode s (convert x) (convert x')
-convert (PNode _ [PLeaf (a, s)])														= TypeNode (show a) s
+convert (PNode _ [PLeaf (a, s)])														= VarNode s
 convert (PNode _ [node])																= convert node
 convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode s (convert x) (map convert xs)
 convert (PNode _ (x: (PLeaf (Keyword "be",s)): x': []))									= BoolExNode $ Comp s (convert x) (convert x')
@@ -249,7 +249,7 @@ convert (PNode _ ((PLeaf (Keyword "navigate", s)): x: x': x'': (PNode Block xs):
 convert (PNode _ ((PLeaf (Keyword "whirlpool", s)): x: (PNode Block xs): []))			= WhileNode s (convert x) (map convert xs)
 convert (PNode _ list) = (map convert list)!!2
 
-data Tree = TypeNode 	String String
+data Tree = VarNode 	String
 		  | BootyNode 	Tree Tree
 		  | OpNode 		String Tree Tree
 		  | BoolExNode 	BoolEx
@@ -264,3 +264,18 @@ data Tree = TypeNode 	String String
 data BoolEx = Comp String Tree Tree
 			| Boolean Tree
 			deriving (Eq, Show)
+
+toRTree :: Tree -> RoseTree
+toRTree (VarNode s) 				= RoseNode s []
+toRTree (BootyNode t1 t2) 			= RoseNode "booty" [toRTree t1, toRTree t2]
+toRTree (OpNode s t1 t2)			= RoseNode s [toRTree t1, toRTree t2]
+toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
+toRTree (BoolExNode (Boolean t1)) 	= RoseNode s [toRTree t1]
+toRTree (GiftNode t1)				= RoseNode "gift" [toRTree t1]
+toRTree (PlunderNode t1)			= RoseNode "plunder" [toRTree t1]
+toRTree (IfNode s t1 list)			= RoseNode s (map toRTree (t1:list))
+toRTree (ForNode s t1 t2 t3 list)	= RoseNode s (map toRTree (t1:t2:t3:list))
+toRTree (WhileNode s t1 list)		= RoseNode s (map toRTree (t1:list))
+toRTree (ZupaNode list)				= RoseMode "Tree" (map toRTree list)
+
+showConvertedTree = showRoseTree $ toRTree $ convert test0
