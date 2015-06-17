@@ -10,13 +10,13 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
 	Stat 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark],													-- Var declaration
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt[elseKey, Block]],									-- If Expression
-				[forKey, lpar, Opt [varKey], idf, equalsKey, Expr, point, BoolExpr, point, Expr, rpar, Block],	-- For Expression
+				[forKey, lpar, Assign, point, BoolExpr, point, Expr, rpar, Block],	-- For Expression
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
 				[returnKey, Opt [Expr], endmark],																-- Return Expression
 				[functionKey, idf, lpar, Opt [FuncVal, Rep0 [comma, FuncVal]], rpar, Block],					-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
-	BoolExpr-> [[Expr, Alt [Alt [equalsKey] [lesserKey]] [greaterKey], Expr],									-- A boolean expression
+	BoolExpr-> [[Expr, equalsKey, Opt [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
@@ -35,6 +35,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	TypeName-> [[Keyword "Doubloon"],																			-- The name of the Type Number
 				[Keyword "Bool"]]																				-- The name of the Type Boolean
 	FuncVal	-> [[varKey, idf, equalsKey, TypeName]]																-- The variable you can use in a function decleration
+	Assign	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -233,21 +234,19 @@ file f = do
 
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) 
-	| elem (show a) ["Idf", "Bool", "Nmbr"] 						= TypeNode (show a) s
-	| otherwise														= ZupaNode []
+	| elem (show a) ["Idf", "Bool", "Nmbr"] 											= TypeNode (show a) s
+	| otherwise																			= ZupaNode []
 
-convert (PNode _ ((PLeaf (Keyword "booty", "booty")):x:x':[]))		= BootyNode (convert x) (convert x')
-convert (PNode _ ((x: (PLeaf (Op,s)): x': [])))						= OpNode s (convert x) (convert x')
-convert (PNode _ [PLeaf (a, s)])									= TypeNode (show a) s
-convert (PNode _ [node])											= convert node
-convert (PNode _ ((PLeaf (Keyword "parley", s)):x:xs))			= IfNode s (convert x) (map convert xs)
-
-convert (PNode _ 
-				((PLeaf (Keyword "navigate", s)):
-
-				)
-		)
-
+convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: x':[]))						= BootyNode (convert x) (convert x')
+convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode s (convert x) (convert x')
+convert (PNode _ [PLeaf (a, s)])														= TypeNode (show a) s
+convert (PNode _ [node])																= convert node
+convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode s (convert x) (map convert xs)
+convert (PNode _ (x: (PLeaf (Keyword "be",s)): x': []))									= BoolExNode $ Comp s (convert x) (convert x')
+convert (PNode _ (x: (PLeaf (Keyword "below",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
+convert (PNode _ (x: (PLeaf (Keyword "above",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
+convert (PNode _ ((PLeaf (Keyword "navigate", s)): x: x': x'': (PNode Block xs): []))	= ForNode s (convert x) (convert x') (convert x'') (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "whirlpool", s)): x: (PNode Block xs): []))			= WhileNode s (convert x) (map convert xs)
 convert (PNode _ list) = (map convert list)!!2
 
 data Tree = TypeNode 	String String
@@ -262,6 +261,6 @@ data Tree = TypeNode 	String String
 		  | ZupaNode	[Tree]
 		  deriving (Eq, Show)
 
-data BoolEx = String Tree Tree
-			| Tree
+data BoolEx = Comp String Tree Tree
+			| Boolean Tree
 			deriving (Eq, Show)

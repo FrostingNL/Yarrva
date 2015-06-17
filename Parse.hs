@@ -35,6 +35,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| TypeName
 		| Op
 		| FuncVal
+		| Assign
 
 		deriving (Eq,Show)
 
