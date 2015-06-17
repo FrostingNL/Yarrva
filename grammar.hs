@@ -35,15 +35,15 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	TypeName-> [[Keyword "Doubloon"],																			-- The name of the Type Number
 				[Keyword "Bool"]]																				-- The name of the Type Boolean
 	FuncVal	-> [[varKey, idf, equalsKey, TypeName]]																-- The variable you can use in a function decleration
-	Assign	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark]]
+	Assign 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 mainKey		= Keyword "flagship"
 returnKey 	= Keyword "avast"
 equalsKey 	= Keyword "be"	
-lesserKey	= Keyword "be lower"
-greaterKey	= Keyword "be higher"
+lesserKey	= Keyword "below"
+greaterKey	= Keyword "above"
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 varKey 		= Keyword "booty"
@@ -196,7 +196,7 @@ test = concat ["fleet Prog {",
 			   "    booty b be 2+3, Arrr!",
 			   "    parley (b be a) {",
 			   "        booty c be 1, Arrr!",
-			   "        navigate (booty i be 0. i be lower 5. gift i) {",
+			   "        navigate (booty i be 0. i below 5. gift i) {",
 			   "            booty c be c+1, Arrr!",
 			   "            booty d be Aye, Arrr!",
 			   "        }",
