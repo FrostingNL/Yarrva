@@ -21,6 +21,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
 	Expr 	-> [[Type, SyntCat Op, Type],																		-- An expression
+				[incKey, Type],																					-- Increase Type by 1
+				[decKey, Type],																					-- Decrease Type by 1
 				[Type]]																							-- One of the types
 	Op		-> [[plus],																							-- Self Explanatory
 				[minus],																						-- Self Explanatory
@@ -54,6 +56,8 @@ whileKey	= Keyword "whirlpool"
 forKey		= Keyword "navigate"
 orKey		= Keyword "or"
 andKey		= Keyword "'n"
+incKey		= Keyword "gift"
+decKey		= Keyword "plunder"
 endmark		= Keyword ", Arrr!"
 
 lpar    = Symbol "("
@@ -192,7 +196,7 @@ test = concat ["fleet Prog {",
 			   "    booty b be 2+3, Arrr!",
 			   "    parley (b be a) {",
 			   "        booty c be 1, Arrr!",
-			   "        navigate (booty i be 0. i be lower 5. i++) {",
+			   "        navigate (booty i be 0. i be lower 5. gift i) {",
 			   "            booty c be c+1, Arrr!",
 			   "            booty d be Aye, Arrr!",
 			   "        }",
