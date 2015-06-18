@@ -40,12 +40,13 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Type	-> [[SyntCat Nmbr],																					-- A number
 				[SyntCat Bool],																					-- A boolean
 				[idf],																							-- An identifier
-				[SyntCat String],
-				[Func]]
+				[SyntCat String],																				-- A string
+				[Func],	
+				[SyntCat Array]]																				-- A function
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
-	FuncVal	-> [[Var, idf]]																-- The variable you can use in a function decleration
+	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
 	Assign 	-> [[Opt [Var], idf, NoCat equalsKey, Expr]]														-- Assign decleration
-	Func 	-> [[idf, lpar, Opt [Expr, Rep0 [NoCat comma, Expr]], rpar]]																	-- Function
+	Func 	-> [[idf, lpar, Opt [Expr, Rep0 [NoCat comma, Expr]], rpar]]										-- Function
 	Var 	-> [[intKey],
 				[boolKey],
 				[stringKey]]
@@ -68,6 +69,7 @@ falseKey 	= Keyword "Nay"
 intKey 		= Keyword "doubloon"
 boolKey		= Keyword "bool"
 stringKey	= Keyword "booty"
+arrayKey	= Keyword "treasure"
 ifExprKey	= Keyword "parley"
 elseKey 	= Keyword "heave"
 breakKey	= Keyword "belay"
@@ -120,6 +122,7 @@ tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
 tokenizer KW (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW xs
 tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
 tokenizer KW (x:xs) 
+	| isArray (x:restArray)							= (Array, x:restArray) :				otherTokensWithoutArray
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
@@ -128,11 +131,35 @@ tokenizer KW (x:xs)
 	| isLetter x									= (Idf, (x:restWord)): 					otherTokens
 	| otherwise 									= tokenizer ERROR (x:xs)
 	where
+		restArray 	= getArray xs
 		restOfString = getString xs
 		restNumber 	= getNum xs
 		restWord 	= getWord xs
 		restString 	= getRest xs
 		otherTokens = tokenizer KW restString
+		otherTokensWithoutArray = tokenizer KW (rmArray xs)
+
+rmArray :: String -> String
+rmArray [] = []
+rmArray (']':xs) = xs
+rmArray (x:xs) = rmArray xs
+
+isArray :: String -> Bool
+isArray [] = False
+isArray ('[':xs) = contains xs ']'
+isArray (' ':xs) = isArray xs
+isArray (_:xs)	= False
+
+contains :: String -> Char -> Bool
+contains [] _ = False
+contains (x:xs) a | x == a = True
+				  | otherwise = contains xs a
+
+getArray :: String -> String
+getArray [] = []
+getArray ('[':xs) = "[" ++ getArray xs
+getArray (']':xs) = "]"
+getArray (x:xs) = x : getArray xs
 
 isLowercase :: Char -> Bool
 isLowercase x = ord x >= 97 && ord x <= 122
@@ -190,7 +217,7 @@ getEndmark :: String
 getEndmark = ", Arrr!"
 
 allKeywords :: [String]
-allKeywords = ["fleet", "flagship", "ship", "avast", "be", "below", "above", "Aye", "Nay", "booty", "doubloon", "bool", "parley", "heave", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+allKeywords = ["fleet", "flagship", "ship", "avast", "be", "treasure", "below", "above", "Aye", "Nay", "booty", "doubloon", "bool", "parley", "heave", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
 
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
@@ -224,14 +251,16 @@ test = concat ["fleet Prog {",
 			   "        navigate (booty i be 0. i below 5. gift i) {",
 			   "            doubloon c be c+1, Arrr!",
 			   "            booty d be \"Hello\", Arrr!",
+			   "            treasure abc be [a,b,c], Arrr!",
 			   "        }",
 			   "    }",
 			   "}"
 			   ]
 
 test2 = concat ["fleet Program {",	
-					"whirlpool(a+1) {",
-					"}",
+		"doubloon c be n +m, Arrr!",
+		"treasure a be [1,3,4], Arrr!",
+		"doubloon c be 5, Arrr!",
 				"}"
 				]
 
