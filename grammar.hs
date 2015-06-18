@@ -58,6 +58,7 @@ data Types 	= Int
 			| Err
 			deriving Show
 
+
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 mainKey		= Keyword "flagship"
@@ -251,14 +252,15 @@ test = concat ["fleet Prog {",
 			   "        doubloon c be 1, Arrr!",
 			   "        navigate (booty i be 0. i below 5. gift i) {",
 			   "            doubloon c be c+1, Arrr!",
+		       "            treasure abc be [a,b,c], Arrr!",
 			   "            booty d be \"Hello\", Arrr!",
-			   "            treasure abc be [a,b,c], Arrr!",
 			   "        }",
 			   "    }",
 			   "}"
 			   ]
 
 test2 = concat ["fleet Program {",	
+		"doubloon c be n +m, Arrr!",
 		"treasure a be [1,3,4], Arrr!",
 		"doubloon c be 5, Arrr!",
 				"}"
@@ -292,9 +294,10 @@ file f = do
 
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) = VarNode s
-convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))						= BootyNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))					= DoubloonNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))							= BoolNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))				= BootyNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))		= DoubloonNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))				= BoolNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))			= TreasureNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
 convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
 																						| s == "Booty"		= VarNode "String"
@@ -315,6 +318,7 @@ convert (PNode _ ((PLeaf (Keyword "flagship", s)): (PNode Block xs): []))				= F
 convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x:[]))					= FuncValNode (convert x) (VarNode "String")
 convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x:[]))			= FuncValNode (convert x) (VarNode "Int")
 convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x:[]))					= FuncValNode (convert x) (VarNode "Bool")
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x:[]))			= FuncValNode (convert x) (VarNode "Array")
 convert (PNode _ ((PLeaf (Keyword "parrot", s)): x: []))								= PrintNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "avast", s)): x: []))									= ReturnNode s (convert x)
 convert (PNode Func ((PLeaf (Idf, s)): xs))												= DoFuncNode s (map convert xs)
@@ -324,6 +328,7 @@ data Tree = VarNode 	String
 		  | BootyNode 	Tree Tree
 		  | DoubloonNode Tree Tree
 		  | BoolNode 	Tree Tree
+		  | TreasureNode Tree Tree
 		  | OpNode 		String Tree Tree
 		  | BoolExNode 	BoolEx
 		  | GiftNode	Tree
@@ -349,6 +354,7 @@ toRTree (VarNode s) 				= RoseNode s []
 toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
 toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
 toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]
+toRTree (TreasureNode t1 t2)		= RoseNode "arrayDecl" [toRTree t1, toRTree t2]
 toRTree (OpNode s t1 t2)			= RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Boolean t1)) 	= RoseNode "boolean" [toRTree t1]
@@ -365,4 +371,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test1
+showConvertedTree = showRoseTree $ toRTree $ convert test0
