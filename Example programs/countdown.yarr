@@ -2,6 +2,7 @@ fleet Program {
 	ship countDown(doubloon n, doubloon m) {
 		doubloon c be n +m, Arrr!
 		whirlpool(c above 0) {
+			booty bo be "Hello!", Arrr!
 			parrot c, Arrr!
 			plunder c, Arrr!
 		}
