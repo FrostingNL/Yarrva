@@ -10,7 +10,7 @@ import System.IO
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
-	Stat 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr, NoCat endmark],										-- Var declaration
+	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark],										-- Var declaration
 				[ifExprKey, lpar, BoolExpr, rpar, Block],														-- If Expression
 				[elseKey, Block],																				-- Else Expression
 				[printKey, Expr, NoCat endmark],																-- Print Expression
@@ -42,12 +42,13 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[SyntCat String],
 				[Func]]
-	TypeName-> [[Keyword "Doubloon"],																			-- The name of the Type Number
-				[Keyword "Bool"]]																				-- The name of the Type Boolean
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
-	FuncVal	-> [[varKey, idf, equalsKey, TypeName]]																-- The variable you can use in a function decleration
-	Assign 	-> [[Opt [varKey], idf, NoCat equalsKey, Expr]]														-- Assign decleration
+	FuncVal	-> [[Var, idf]]																-- The variable you can use in a function decleration
+	Assign 	-> [[Opt [Var], idf, NoCat equalsKey, Expr]]														-- Assign decleration
 	Func 	-> [[idf, lpar, Opt [Expr, Rep0 [NoCat comma, Expr]], rpar]]																	-- Function
+	Var 	-> [[intKey],
+				[boolKey],
+				[stringKey]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -58,7 +59,9 @@ lesserKey	= Keyword "below"
 greaterKey	= Keyword "above"
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
-varKey 		= Keyword "booty"
+intKey 		= Keyword "doubloon"
+boolKey		= Keyword "bool"
+stringKey	= Keyword "booty"
 ifExprKey	= Keyword "parley"
 elseKey 	= Keyword "heave"
 breakKey	= Keyword "belay"
@@ -181,7 +184,7 @@ getEndmark :: String
 getEndmark = ", Arrr!"
 
 allKeywords :: [String]
-allKeywords = ["fleet", "flagship", "ship", "avast", "be", "below", "above", "Aye", "Nay", "booty", "parley", "heave", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+allKeywords = ["fleet", "flagship", "ship", "avast", "be", "below", "above", "Aye", "Nay", "booty", "doubloon", "bool", "parley", "heave", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
 
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
@@ -196,24 +199,24 @@ helloWorld = concat ["fleet HelloWorld {",
 					]
 
 sampleFunction = concat ["fleet SampleFunction {",
-						 "   ship add3(booty i be Doubloon, booty a be Bool) {",
+						 "   ship add3(doubloon i) {",
 						 "      avast i + 3, Arrr!",
 						 "   }",
 						 "   ",
 						 "   flagship() {",
-						 "      booty a be add3(5), Arrr!",
+						 "      doubloon a be add3(5), Arrr!",
 						 "      parrot a, Arrr!",
 						 "   }",
 						 "}"
 						]
 
 test = concat ["fleet Prog {",
-			   "    booty a be 1, Arrr!",
-			   "    booty b be 2+3, Arrr!",
+			   "    doubloon a be 1, Arrr!",
+			   "    doubloon b be 2+3, Arrr!",
 			   "    parley (b be a) {",
-			   "        booty c be 1, Arrr!",
+			   "        doubloon c be 1, Arrr!",
 			   "        navigate (booty i be 0. i below 5. gift i) {",
-			   "            booty c be c+1, Arrr!",
+			   "            doubloon c be c+1, Arrr!",
 			   "            booty d be \"Hello\", Arrr!",
 			   "        }",
 			   "    }",
@@ -221,8 +224,8 @@ test = concat ["fleet Prog {",
 			   ]
 
 test2 = concat ["fleet Fib {",
-				"    booty a be \"Hello\", Arrr!",
-				"    a be \"Bye\", Arrr!",
+				"    ship a(doubloon b) {",
+				"    }",
 				"}"
 				]
 
@@ -255,8 +258,11 @@ file f = do
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) = VarNode s
 convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: x':[]))						= BootyNode (convert x) (convert x')
+convert (PNode _ ((PLeaf (Keyword "doubloon", "doubloon")): x: x':[]))					= DoubloonNode (convert x) (convert x')
+convert (PNode _ ((PLeaf (Keyword "bool", "bool")): x: x':[]))							= BoolNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
 convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
+																						| s == "Booty"		= VarNode "String"
 																						| otherwise 		= VarNode s
 convert (PNode _ [node])																= convert node
 convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode 	(convert x) (map convert xs)
@@ -271,7 +277,9 @@ convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode 	(convert x
 convert (PNode _ ((PLeaf (Idf, "plunder")):x:[])) 										= PlunderNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "ship", _)): (PLeaf (Idf, s)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
 convert (PNode _ ((PLeaf (Keyword "flagship", s)): (PNode Block xs): []))				= FuncNode 	s [] (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: _: x':[]))						= FuncValNode (convert x) (convert x')
+convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x:[]))							= FuncValNode (convert x) (VarNode "String")
+convert (PNode _ ((PLeaf (Keyword "doubloon", "doubloon")): x:[]))						= FuncValNode (convert x) (VarNode "Int")
+convert (PNode _ ((PLeaf (Keyword "bool", "bool")): x:[]))								= FuncValNode (convert x) (VarNode "Bool")
 convert (PNode _ ((PLeaf (Keyword "parrot", s)): x: []))								= PrintNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "avast", s)): x: []))									= ReturnNode s (convert x)
 convert (PNode Func ((PLeaf (Idf, s)): xs))												= DoFuncNode s (map convert xs)
@@ -279,6 +287,8 @@ convert (PNode _ (x: x': []))															= BootyNode (convert x) (convert x')
 
 data Tree = VarNode 	String
 		  | BootyNode 	Tree Tree
+		  | DoubloonNode Tree Tree
+		  | BoolNode 	Tree Tree
 		  | OpNode 		String Tree Tree
 		  | BoolExNode 	BoolEx
 		  | GiftNode	Tree
@@ -301,7 +311,9 @@ data BoolEx = Comp String Tree Tree
 
 toRTree :: Tree -> RoseTree
 toRTree (VarNode s) 				= RoseNode s []
-toRTree (BootyNode t1 t2) 			= RoseNode "decl" [toRTree t1, toRTree t2]
+toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
+toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
+toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]
 toRTree (OpNode s t1 t2)			= RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Boolean t1)) 	= RoseNode "boolean" [toRTree t1]
