@@ -1,3 +1,5 @@
+module Grammar where
+
 import Parse
 import Data.Char
 import Data.List
@@ -98,7 +100,7 @@ tokenizer s ('\n':xs) = tokenizer s xs
 
 tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
 
-tokenizer START (x:xs) | ord x >= 97 && ord x <= 122 = tokenizer KW (x:xs)
+tokenizer START (x:xs) | isLowercase x = tokenizer KW (x:xs)
 					   | otherwise = tokenizer ERROR (x:xs)
 
 tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
@@ -109,19 +111,22 @@ tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
 tokenizer KW (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW xs
 tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
 tokenizer KW (x:xs) 
-	| startsWith getEndmark (x:xs)					= (endmark, getEndmark): 				tokenizer KW (rmEndMark (x:xs))
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
 	| elem x "+-*/"									= (Op, [x]):							tokenizer KW (restWord ++ restString) 
 	| isNumber x									= (Nmbr, x:restNumber): 				otherTokens
-	| otherwise										= (Idf, (x:restWord)): 					otherTokens
+	| isLetter x									= (Idf, (x:restWord)): 					otherTokens
+	| otherwise 									= tokenizer ERROR (x:xs)
 	where
 		restOfString = getString xs
 		restNumber 	= getNum xs
 		restWord 	= getWord xs
 		restString 	= getRest xs
 		otherTokens = tokenizer KW restString
+
+isLowercase :: Char -> Bool
+isLowercase x = ord x >= 97 && ord x <= 122
 
 getString :: String -> String
 getString [] 			= []
@@ -217,6 +222,7 @@ test = concat ["fleet Prog {",
 
 test2 = concat ["fleet Fib {",
 				"    booty a be \"Hello\", Arrr!",
+				"    a be \"Bye\", Arrr!",
 				"}"
 				]
 
@@ -295,7 +301,7 @@ data BoolEx = Comp String Tree Tree
 
 toRTree :: Tree -> RoseTree
 toRTree (VarNode s) 				= RoseNode s []
-toRTree (BootyNode t1 t2) 			= RoseNode "var" [toRTree t1, toRTree t2]
+toRTree (BootyNode t1 t2) 			= RoseNode "decl" [toRTree t1, toRTree t2]
 toRTree (OpNode s t1 t2)			= RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Boolean t1)) 	= RoseNode "boolean" [toRTree t1]
@@ -312,4 +318,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test0
+showConvertedTree = showRoseTree $ toRTree $ convert test1
