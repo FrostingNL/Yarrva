@@ -116,6 +116,7 @@ tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
 tokenizer KW (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW xs
 tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
 tokenizer KW (x:xs) 
+	| isArray (x:restArray)							= (Array, x:restArray) :				otherTokensWithoutArray
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
@@ -124,11 +125,35 @@ tokenizer KW (x:xs)
 	| isLetter x									= (Idf, (x:restWord)): 					otherTokens
 	| otherwise 									= tokenizer ERROR (x:xs)
 	where
+		restArray 	= getArray xs
 		restOfString = getString xs
 		restNumber 	= getNum xs
 		restWord 	= getWord xs
 		restString 	= getRest xs
 		otherTokens = tokenizer KW restString
+		otherTokensWithoutArray = tokenizer KW (rmArray xs)
+
+rmArray :: String -> String
+rmArray [] = []
+rmArray (']':xs) = xs
+rmArray (x:xs) = rmArray xs
+
+isArray :: String -> Bool
+isArray [] = False
+isArray ('[':xs) = contains xs ']'
+isArray (' ':xs) = isArray xs
+isArray (_:xs)	= False
+
+contains :: String -> Char -> Bool
+contains [] _ = False
+contains (x:xs) a | x == a = True
+				  | otherwise = contains xs a
+
+getArray :: String -> String
+getArray [] = []
+getArray ('[':xs) = "[" ++ getArray xs
+getArray (']':xs) = "]"
+getArray (x:xs) = x : getArray xs
 
 isLowercase :: Char -> Bool
 isLowercase x = ord x >= 97 && ord x <= 122
@@ -220,6 +245,7 @@ test = concat ["fleet Prog {",
 			   "        navigate (booty i be 0. i below 5. gift i) {",
 			   "            doubloon c be c+1, Arrr!",
 			   "            booty d be \"Hello\", Arrr!",
+			   "            treasure abc be [a,b,c], Arrr!",
 			   "        }",
 			   "    }",
 			   "}"
@@ -227,6 +253,8 @@ test = concat ["fleet Prog {",
 
 test2 = concat ["fleet Program {",	
 		"doubloon c be n +m, Arrr!",
+		"treasure a be [1,3,4], Arrr!",
+		"doubloon c be 5, Arrr!",
 				"}"
 				]
 
