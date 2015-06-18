@@ -223,9 +223,8 @@ test = concat ["fleet Prog {",
 			   "}"
 			   ]
 
-test2 = concat ["fleet Fib {",
-				"    ship a(doubloon b) {",
-				"    }",
+test2 = concat ["fleet Program {",	
+		"doubloon c be n +m, Arrr!",
 				"}"
 				]
 
@@ -257,9 +256,9 @@ file f = do
 
 convert :: ParseTree -> Tree
 convert (PLeaf (a, s)) = VarNode s
-convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x: x':[]))						= BootyNode (convert x) (convert x')
-convert (PNode _ ((PLeaf (Keyword "doubloon", "doubloon")): x: x':[]))					= DoubloonNode (convert x) (convert x')
-convert (PNode _ ((PLeaf (Keyword "bool", "bool")): x: x':[]))							= BoolNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))						= BootyNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))					= DoubloonNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))							= BoolNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
 convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
 																						| s == "Booty"		= VarNode "String"
@@ -277,9 +276,9 @@ convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode 	(convert x
 convert (PNode _ ((PLeaf (Idf, "plunder")):x:[])) 										= PlunderNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "ship", _)): (PLeaf (Idf, s)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
 convert (PNode _ ((PLeaf (Keyword "flagship", s)): (PNode Block xs): []))				= FuncNode 	s [] (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "booty", "booty")): x:[]))							= FuncValNode (convert x) (VarNode "String")
-convert (PNode _ ((PLeaf (Keyword "doubloon", "doubloon")): x:[]))						= FuncValNode (convert x) (VarNode "Int")
-convert (PNode _ ((PLeaf (Keyword "bool", "bool")): x:[]))								= FuncValNode (convert x) (VarNode "Bool")
+convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x:[]))					= FuncValNode (convert x) (VarNode "String")
+convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x:[]))			= FuncValNode (convert x) (VarNode "Int")
+convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x:[]))					= FuncValNode (convert x) (VarNode "Bool")
 convert (PNode _ ((PLeaf (Keyword "parrot", s)): x: []))								= PrintNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "avast", s)): x: []))									= ReturnNode s (convert x)
 convert (PNode Func ((PLeaf (Idf, s)): xs))												= DoFuncNode s (map convert xs)
