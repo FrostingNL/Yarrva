@@ -52,6 +52,12 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[stringKey],
 				[arrayKey]]
 
+data Types 	= Int
+			| Boo
+			| Str
+			| Err
+			deriving Show
+
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 mainKey		= Keyword "flagship"
