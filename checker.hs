@@ -1,6 +1,35 @@
 import Data.Char
 import FPPrac.Trees
 import Data.List
-import grammar
+import Grammar
 
-typeCheck :: Tree -> [[(String, Type)]] -> Bool
+getType :: String -> [[(String, Types)]] -> Types
+getType	s []					= Err
+getType s ([]:x:list)			= getType s (x:list)
+getType s (((s2,t):tup):list) 	| s == s2 	= t
+							  	| otherwise = getType s (tup:list)
+
+isAccesible :: [[(String, Types)]] -> Tree -> Bool
+isAccesible [] a								= False
+isAccesible ([]:x:list) a 						= isAccesible (x:list) a 
+isAccesible (((s2,_):tup):list) (VarNode s)  	| s == s2 	= True
+												| otherwise = isAccesible (tup:list) (VarNode s) 
+isAccesible list (BootyNode t1 t2)				= isAccesible list t1 && isAccesible list t2
+isAccesible list (DoubloonNode t1 t2) 			= isAccesible list t1 && isAccesible list t2
+isAccesible list (BoolNode t1 t2) 				= isAccesible list t1 && isAccesible list t2
+isAccesible list (OpNode _ t1 t2) 				= isAccesible list t1 && isAccesible list t2
+isAccesible list (BoolExNode (Comp _ t1 t2))  	= isAccesible list t1 && isAccesible list t2
+isAccesible list (BoolExNode (Boolean t1)) 		= isAccesible list t1
+isAccesible list (GiftNode t1) 					= isAccesible list t1
+isAccesible list (PlunderNode t1) 				= isAccesible list t1
+isAccesible list (IfNode t1 xs)  				= isAccesible list t1 && all (==True) (map (isAccesible list) xs) 
+isAccesible list (ElseNode xs)					= all (==True) (map (isAccesible list) xs)
+isAccesible list (ForNode t1 t2 t3 xs)			= isAccesible list t1 && isAccesible list t2 && isAccesible list t3 && all (==True) (map (isAccesible list) xs)
+isAccesible list (WhileNode t1 xs)				= isAccesible list t1 && all (==True) (map (isAccesible list) xs)
+isAccesible list (FuncNode s xs xs')			= all (==True) (map (isAccesible list) xs) && all (==True) (map (isAccesible list) xs')
+isAccesible list (FuncValNode t1 t2)			= isAccesible list t1 && isAccesible list t2
+isAccesible list (PrintNode t1)					= isAccesible list t1
+isAccesible list (ReturnNode s t1)				= isAccesible list t1
+isAccesible list (DoFuncNode s xs)				= all (==True) (map (isAccesible list) xs)
+isAccesible list (ZupaNode s xs)				= all (==True) (map (isAccesible list) xs)
+isAccesible	list _								= False

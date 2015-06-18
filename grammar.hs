@@ -50,6 +50,12 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[boolKey],
 				[stringKey]]
 
+data Types 	= Int
+			| Boo
+			| Str
+			| Err
+			deriving Show
+
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 mainKey		= Keyword "flagship"
@@ -224,7 +230,8 @@ test = concat ["fleet Prog {",
 			   ]
 
 test2 = concat ["fleet Program {",	
-		"doubloon c be n +m, Arrr!",
+					"whirlpool(a+1) {",
+					"}",
 				"}"
 				]
 
