@@ -49,7 +49,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Func 	-> [[idf, lpar, Opt [Expr, Rep0 [NoCat comma, Expr]], rpar]]										-- Function
 	Var 	-> [[intKey],
 				[boolKey],
-				[stringKey]]
+				[stringKey],
+				[arrayKey]]
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
@@ -252,7 +253,6 @@ test = concat ["fleet Prog {",
 			   ]
 
 test2 = concat ["fleet Program {",	
-		"doubloon c be n +m, Arrr!",
 		"treasure a be [1,3,4], Arrr!",
 		"doubloon c be 5, Arrr!",
 				"}"
