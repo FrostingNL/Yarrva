@@ -55,8 +55,9 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 data Types 	= Int
 			| Boo
 			| Str
+			| Arr
 			| Err
-			deriving Show
+			deriving (Eq,Show)
 
 
 progKey 	= Keyword "fleet"
@@ -248,11 +249,12 @@ sampleFunction = concat ["fleet SampleFunction {",
 test = concat ["fleet Prog {",
 			   "    doubloon a be 1, Arrr!",
 			   "    doubloon b be 2+3, Arrr!",
-			   "    parley (b be a) {",
+			   "    booty c be \"SDsD\", Arrr!",
+			   "    bool d be Aye, Arrr!",
+			   "    parley (c be b) {",
 			   "        doubloon c be 1, Arrr!",
 			   "        navigate (booty i be 0. i below 5. gift i) {",
 			   "            doubloon c be c+1, Arrr!",
-		       "            treasure abc be [a,b,c], Arrr!",
 			   "            booty d be \"Hello\", Arrr!",
 			   "        }",
 			   "    }",
@@ -297,7 +299,7 @@ convert (PLeaf (a, s)) = VarNode s
 convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))				= BootyNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))		= DoubloonNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))				= BoolNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))			= TreasureNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))		= TreasureNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
 convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
 																						| s == "Booty"		= VarNode "String"
