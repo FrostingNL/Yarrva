@@ -106,41 +106,41 @@ comma	= Symbol ","
 
 data State = START | ERROR | KW | KWWORD
 
-tokenizer :: State -> String -> [Token]
-tokenizer _ [] = []
-tokenizer s (' ':xs) = tokenizer s xs
-tokenizer s ('\t':xs) = tokenizer s xs
-tokenizer s ('\n':xs) = tokenizer s xs
+tokenizer :: State -> Int -> String -> [Token]
+tokenizer _ _ [] = []
+tokenizer s l (' ':xs) = tokenizer s l xs
+tokenizer s l ('\t':xs) = tokenizer s l xs
+tokenizer s l ('\n':xs) = tokenizer s (l+1) xs
 
-tokenizer ERROR _ = error "Shiver me timbers! You done it wrong, Arrr!"
+tokenizer ERROR l _ = error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l))
 
-tokenizer START (x:xs) | isLowercase x = tokenizer KW (x:xs)
-					   | otherwise = tokenizer ERROR (x:xs)
+tokenizer START l (x:xs) | isLowercase x = tokenizer KW l (x:xs)
+					   	 | otherwise = tokenizer ERROR l (x:xs)
 
-tokenizer KW ('{':xs) = (lcbr, ['{']): tokenizer KW xs
-tokenizer KW ('}':xs) = (rcbr, ['}']): tokenizer KW xs
-tokenizer KW ('(':xs) = (lpar, ['(']): tokenizer KW xs
-tokenizer KW (')':xs) = (rpar, [')']): tokenizer KW xs
-tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
-tokenizer KW (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW xs
-tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
-tokenizer KW (x:xs) 
+tokenizer KW l ('{':xs) = (lcbr, ['{']): tokenizer KW l xs
+tokenizer KW l ('}':xs) = (rcbr, ['}']): tokenizer KW l xs
+tokenizer KW l ('(':xs) = (lpar, ['(']): tokenizer KW l xs
+tokenizer KW l (')':xs) = (rpar, [')']): tokenizer KW l xs
+tokenizer KW l ('.':xs) = (point, ['.']): tokenizer KW l xs
+tokenizer KW l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW l xs
+tokenizer KW l (',':xs) = (comma, [',']): tokenizer KW l xs
+tokenizer KW l (x:xs)
 	| isArray (x:restArray)							= (Array, x:restArray) :				otherTokensWithoutArray
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
-	| elem x "+-*/"									= (Op, [x]):							tokenizer KW (restWord ++ restString) 
+	| elem x "+-*/"									= (Op, [x]):							tokenizer KW l (restWord ++ restString) 
 	| isNumber x									= (Nmbr, x:restNumber): 				otherTokens
-	| isLetter x									= (Idf, (x:restWord)): 					otherTokens
-	| otherwise 									= tokenizer ERROR (x:xs)
+	| isLetter x									= (Idf, ((show l) ++ (':':x:restWord))): otherTokens
+	| otherwise 									= tokenizer ERROR l (x:xs)
 	where
 		restArray 	= getArray xs
 		restOfString = getString xs
 		restNumber 	= getNum xs
 		restWord 	= getWord xs
 		restString 	= getRest xs
-		otherTokens = tokenizer KW restString
-		otherTokensWithoutArray = tokenizer KW (rmArray xs)
+		otherTokens = tokenizer KW l restString
+		otherTokensWithoutArray = tokenizer KW l (rmArray xs)
 
 rmArray :: String -> String
 rmArray [] = []
@@ -268,7 +268,7 @@ test2 = concat ["fleet Program {",
 				"}"
 				]
 
-tokens = tokenizer START
+tokens = tokenizer START 0
 
 test0 = parse grammar Program $ tokens test
 test1 = parse grammar Program $ tokens test2
@@ -294,16 +294,26 @@ file f = do
 	contents <- hGetContents handle
 	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
+getInt :: String -> String
+getInt (x:xs)
+	| x == ':' 	= []
+	| otherwise = x: getInt xs
+
+rmInt :: String -> String
+rmInt (x:xs)
+	| x == ':'	= xs
+	| otherwise = rmInt xs 
+
 convert :: ParseTree -> Tree
-convert (PLeaf (a, s)) = VarNode s
+convert (PLeaf (a, s)) = VarNode (rmInt s) (read (getInt s)) 
 convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))				= BootyNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))		= DoubloonNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))				= BoolNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))		= TreasureNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
-convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
-																						| s == "Booty"		= VarNode "String"
-																						| otherwise 		= VarNode s
+convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int" 0
+																						| s == "Booty"		= VarNode "String" 0
+																						| otherwise 		= VarNode s 0
 convert (PNode _ [node])																= convert node
 convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode 	(convert x) (map convert xs)
 convert (PNode _ ((PLeaf (Keyword "heave", s)): (PNode Block xs): []))					= ElseNode  (map convert xs)
@@ -317,16 +327,16 @@ convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode 	(convert x
 convert (PNode _ ((PLeaf (Idf, "plunder")):x:[])) 										= PlunderNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "ship", _)): (PLeaf (Idf, s)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
 convert (PNode _ ((PLeaf (Keyword "flagship", s)): (PNode Block xs): []))				= FuncNode 	s [] (map convert xs)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x:[]))					= FuncValNode (convert x) (VarNode "String")
-convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x:[]))			= FuncValNode (convert x) (VarNode "Int")
-convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x:[]))					= FuncValNode (convert x) (VarNode "Bool")
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x:[]))			= FuncValNode (convert x) (VarNode "Array")
+convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x:[]))					= FuncValNode (convert x) (VarNode "String" 0)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x:[]))			= FuncValNode (convert x) (VarNode "Int" 0)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x:[]))					= FuncValNode (convert x) (VarNode "Bool" 0)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x:[]))			= FuncValNode (convert x) (VarNode "Array" 0)
 convert (PNode _ ((PLeaf (Keyword "parrot", s)): x: []))								= PrintNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "avast", s)): x: []))									= ReturnNode s (convert x)
 convert (PNode Func ((PLeaf (Idf, s)): xs))												= DoFuncNode s (map convert xs)
 convert (PNode _ (x: x': []))															= BootyNode (convert x) (convert x')
 
-data Tree = VarNode 	String
+data Tree = VarNode 	String Int
 		  | BootyNode 	Tree Tree
 		  | DoubloonNode Tree Tree
 		  | BoolNode 	Tree Tree
@@ -352,7 +362,7 @@ data BoolEx = Comp String Tree Tree
 			deriving (Eq, Show)
 
 toRTree :: Tree -> RoseTree
-toRTree (VarNode s) 				= RoseNode s []
+toRTree (VarNode s l) 				= RoseNode ((show l) ++ ": " ++ s) []
 toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
 toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
 toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]
