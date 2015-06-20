@@ -117,21 +117,21 @@ tokenizer ERROR l _ = error ("Shiver me timbers! You done it wrong, Arrr! On lin
 tokenizer START l (x:xs) | isLowercase x = tokenizer KW l (x:xs)
 					   	 | otherwise = tokenizer ERROR l (x:xs)
 
-tokenizer KW l ('{':xs) = (lcbr, ['{']): tokenizer KW l xs
-tokenizer KW l ('}':xs) = (rcbr, ['}']): tokenizer KW l xs
-tokenizer KW l ('(':xs) = (lpar, ['(']): tokenizer KW l xs
-tokenizer KW l (')':xs) = (rpar, [')']): tokenizer KW l xs
-tokenizer KW l ('.':xs) = (point, ['.']): tokenizer KW l xs
-tokenizer KW l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW l xs
-tokenizer KW l (',':xs) = (comma, [',']): tokenizer KW l xs
+tokenizer KW l ('{':xs) = (lcbr, ['{'], l): tokenizer KW l xs
+tokenizer KW l ('}':xs) = (rcbr, ['}'], l): tokenizer KW l xs
+tokenizer KW l ('(':xs) = (lpar, ['('], l): tokenizer KW l xs
+tokenizer KW l (')':xs) = (rpar, [')'], l): tokenizer KW l xs
+tokenizer KW l ('.':xs) = (point, ['.'], l): tokenizer KW l xs
+tokenizer KW l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark, l): tokenizer KW l xs
+tokenizer KW l (',':xs) = (comma, [','], l): tokenizer KW l xs
 tokenizer KW l (x:xs)
-	| isArray (x:restArray)							= (Array, x:restArray) :				otherTokensWithoutArray
-	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
-	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
-	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
-	| elem x "+-*/"									= (Op, [x]):							tokenizer KW l (restWord ++ restString) 
-	| isNumber x									= (Nmbr, x:restNumber): 				otherTokens
-	| isLetter x									= (Idf, ((show l) ++ (':':x:restWord))): otherTokens
+	| isArray (x:restArray)							= (Array, x:restArray, l) :					otherTokensWithoutArray
+	| isBoolean (x:restWord)						= (Bool, x:restWord, l) : 					otherTokens
+	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord, l): 	otherTokens
+	| isString (x:restOfString)						= (String, x:restOfString, l):				otherTokens
+	| elem x "+-*/"									= (Op, [x], l):								tokenizer KW l (restWord ++ restString) 
+	| isNumber x									= (Nmbr, x:restNumber, l): 					otherTokens
+	| isLetter x									= (Idf, x:restWord, l):					 	otherTokens
 	| otherwise 									= tokenizer ERROR l (x:xs)
 	where
 		restArray 	= getArray xs
@@ -229,12 +229,12 @@ startsWith (s:search) (w:word)
 	| s == w = startsWith search word
 	| otherwise = False
 
-helloWorld = concat ["fleet HelloWorld {",
+helloWorld = unlines ["fleet HelloWorld {",
 					 "   parrot \"Ahoy World!\", Arrr!",
 					 "}"
 					]
 
-sampleFunction = concat ["fleet SampleFunction {",
+sampleFunction = unlines ["fleet SampleFunction {",
 						 "   ship add3(doubloon i) {",
 						 "      avast i + 3, Arrr!",
 						 "   }",
@@ -246,24 +246,18 @@ sampleFunction = concat ["fleet SampleFunction {",
 						 "}"
 						]
 
-test = concat ["fleet Prog {",
+test = unlines ["fleet Prog {",
 			   "    doubloon a be 1, Arrr!",
 			   "    doubloon b be 2+3, Arrr!",
 			   "    booty c be \"SDsD\", Arrr!",
 			   "    bool d be Aye, Arrr!",
 			   "    parley (c be b) {",
 			   "        doubloon c be 1, Arrr!",
-			   "        navigate (booty i be 0. i below 5. gift i) {",
-			   "            doubloon c be c+1, Arrr!",
-			   "            booty d be \"Hello\", Arrr!",
-			   "        }",
 			   "    }",
 			   "}"
 			   ]
 
-test2 = concat ["fleet Program {",	
-		"doubloon c be n +m, Arrr!",
-		"treasure a be [1,3,4], Arrr!",
+test2 = unlines ["fleet Program {",	
 		"doubloon c be 5, Arrr!",
 				"}"
 				]
@@ -294,46 +288,36 @@ file f = do
 	contents <- hGetContents handle
 	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
-getInt :: String -> String
-getInt (x:xs)
-	| x == ':' 	= []
-	| otherwise = x: getInt xs
-
-rmInt :: String -> String
-rmInt (x:xs)
-	| x == ':'	= xs
-	| otherwise = rmInt xs 
-
 convert :: ParseTree -> Tree
-convert (PLeaf (a, s)) = VarNode (rmInt s) (read (getInt s)) 
-convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))				= BootyNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))		= DoubloonNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))				= BoolNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))		= TreasureNode (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
-convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int" 0
-																						| s == "Booty"		= VarNode "String" 0
-																						| otherwise 		= VarNode s 0
+convert (PLeaf (a, s, l)) = VarNode s l
+convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x: x':[]))			= BootyNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x: x':[]))		= DoubloonNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x: x':[]))				= BoolNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x: x':[]))		= TreasureNode (convert x) (convert x')
+convert (PNode _ (x: (PLeaf (Op,s, _)): x': []))										= OpNode 	s (convert x) (convert x')
+convert (PNode _ [PLeaf (a, s, l)])														| s == "Doubloon" 	= VarNode "Int" l
+																						| s == "Booty"		= VarNode "String" l
+																						| otherwise 		= VarNode s l
 convert (PNode _ [node])																= convert node
-convert (PNode _ ((PLeaf (Keyword "parley", s)): x: (PNode Block xs): []))				= IfNode 	(convert x) (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "heave", s)): (PNode Block xs): []))					= ElseNode  (map convert xs)
-convert (PNode _ (x: (PLeaf (Keyword "be",s)): x': []))									= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Keyword "below",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Keyword "above",s)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ ((PLeaf (Keyword "navigate", s)): x: x': x'': (PNode Block xs): []))	= ForNode 	(convert x) (convert x') (convert x'') (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "whirlpool", s)): x: (PNode Block xs): []))			= WhileNode (convert x) (map convert xs)
-convert (PNode Program (x:(PLeaf (a,s)):(PNode Block xs):[]))							= ZupaNode 	s (map convert xs)
-convert (PNode _ ((PLeaf (Idf, "gift")):x:[])) 											= GiftNode 	(convert x)
-convert (PNode _ ((PLeaf (Idf, "plunder")):x:[])) 										= PlunderNode (convert x)
-convert (PNode _ ((PLeaf (Keyword "ship", _)): (PLeaf (Idf, s)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
-convert (PNode _ ((PLeaf (Keyword "flagship", s)): (PNode Block xs): []))				= FuncNode 	s [] (map convert xs)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x:[]))					= FuncValNode (convert x) (VarNode "String" 0)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x:[]))			= FuncValNode (convert x) (VarNode "Int" 0)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x:[]))					= FuncValNode (convert x) (VarNode "Bool" 0)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x:[]))			= FuncValNode (convert x) (VarNode "Array" 0)
-convert (PNode _ ((PLeaf (Keyword "parrot", s)): x: []))								= PrintNode (convert x)
-convert (PNode _ ((PLeaf (Keyword "avast", s)): x: []))									= ReturnNode s (convert x)
-convert (PNode Func ((PLeaf (Idf, s)): xs))												= DoFuncNode s (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "parley", s, _)): x: (PNode Block xs): []))			= IfNode 	(convert x) (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "heave", s, _)): (PNode Block xs): []))				= ElseNode  (map convert xs)
+convert (PNode _ (x: (PLeaf (Keyword "be",s, _)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
+convert (PNode _ (x: (PLeaf (Keyword "below",s, _)): x': []))							= BoolExNode $ Comp s (convert x) (convert x')
+convert (PNode _ (x: (PLeaf (Keyword "above",s, _)): x': []))							= BoolExNode $ Comp s (convert x) (convert x')
+convert (PNode _ ((PLeaf (Keyword "navigate", s, _)): x: x': x'': (PNode Block xs): []))= ForNode 	(convert x) (convert x') (convert x'') (map convert xs)
+convert (PNode _ ((PLeaf (Keyword "whirlpool", s, _)): x: (PNode Block xs): []))		= WhileNode (convert x) (map convert xs)
+convert (PNode Program (x:(PLeaf (a,s, _)):(PNode Block xs):[]))						= ZupaNode 	s (map convert xs)
+convert (PNode _ ((PLeaf (Idf, "gift", _)):x:[])) 										= GiftNode 	(convert x)
+convert (PNode _ ((PLeaf (Idf, "plunder", _)):x:[])) 									= PlunderNode (convert x)
+convert (PNode _ ((PLeaf (Keyword "ship", _, _)): (PLeaf (Idf, s, _)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
+convert (PNode _ ((PLeaf (Keyword "flagship", s, _)): (PNode Block xs): []))			= FuncNode 	s [] (map convert xs)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x:[]))				= FuncValNode (convert x) (VarNode "String" 0)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x:[]))			= FuncValNode (convert x) (VarNode "Int" 0)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x:[]))					= FuncValNode (convert x) (VarNode "Bool" 0)
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x:[]))			= FuncValNode (convert x) (VarNode "Array" 0)
+convert (PNode _ ((PLeaf (Keyword "parrot", s, _)): x: []))								= PrintNode (convert x)
+convert (PNode _ ((PLeaf (Keyword "avast", s, _)): x: []))								= ReturnNode s (convert x)
+convert (PNode Func ((PLeaf (Idf, s, _)): xs))											= DoFuncNode s (map convert xs)
 convert (PNode _ (x: x': []))															= BootyNode (convert x) (convert x')
 
 data Tree = VarNode 	String Int

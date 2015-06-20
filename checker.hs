@@ -30,23 +30,23 @@ as (ZupaNode s xs) = addToScope xs
 
 addToScope :: [Tree] -> [(String, Types)]
 addToScope [] 									= []
-addToScope ((BootyNode (VarNode s) t): xs)		| checkType t Str []	= (s, Str): addToScope xs 
-												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a String!")
-addToScope ((DoubloonNode (VarNode s) t): xs)	| checkType t Int []	= (s, Int): addToScope xs 
-												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Integer!")
-addToScope ((BoolNode (VarNode s) t): xs)		| checkType t Boo []	= (s, Boo): addToScope xs 
-												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Boolean!")
-addToScope ((TreasureNode (VarNode s) t): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
-												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Boolean!")
+addToScope ((BootyNode (VarNode s l) t): xs)	| checkType t Str []	= (s, Str): addToScope xs 
+												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a String! Line:" ++ (show l))
+addToScope ((DoubloonNode (VarNode s l) t): xs)	| checkType t Int []	= (s, Int): addToScope xs 
+												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Integer! Line:" ++ (show l))
+addToScope ((BoolNode (VarNode s l) t): xs)		| checkType t Boo []	= (s, Boo): addToScope xs 
+												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Boolean! Line:" ++ (show l))
+addToScope ((TreasureNode (VarNode s l) t): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
+												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Boolean! Line:" ++ (show l))
 addToScope (_: xs)								= addToScope xs
 
 checkType :: Tree -> Types -> [[(String, Types)]] -> Bool
-checkType (VarNode s) Int list 						| all (==True) (map (isNumber) s) || getType s list == Int 	= True
-													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an Integer!")
-checkType (VarNode s) Str list 						| isString s || getType s list == Str						= True
-													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an String!")
-checkType (VarNode s) Boo list 						| s == "Aye" || s == "Nay" || getType s list == Boo			= True
-													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an Boolean!")
+checkType (VarNode s l) Int list 					| all (==True) (map (isNumber) s) || getType s l list == Int 	= True
+													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an Integer! Line:" ++ (show l))
+checkType (VarNode s l) Str list 					| isString s || getType s l list == Str						= True
+													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an String! Line:" ++ (show l))
+checkType (VarNode s l) Boo list 					| s == "Aye" || s == "Nay" || getType s l list == Boo			= True
+													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an Boolean! Line:" ++ (show l))
 checkType (OpNode s t1 t2) Int list					| checkType t1 Int list && checkType t2 Int list 			= True
 													| otherwise													= error ("Incorrect Type: " ++ (getValue t1) ++ " and " ++ (getValue t2) ++ " are not Integers!")
 checkType (OpNode "+" t1 t2) Str list 				| checkType t1 Str list && checkType t2 Str list 			= True
@@ -61,22 +61,22 @@ checkType (BoolExNode (Boolean t1))	Boo	list		| checkType t1 Boo list										=
 													| otherwise													= error ("Incorrect Type: " ++ (getValue t1) ++ "is not an Boolean!")
 checkType _ _ _										= False
 
-getType :: String -> [[(String, Types)]] -> Types
-getType	s []					= error ("Declaration: " ++ s ++ " isn't declared yet!")
-getType s ([]:list)				= getType s (list)
-getType s (((s2,t):tup):list) 	| s == s2 	= t
-							  	| otherwise = getType s (tup:list)
+getType :: String -> Int -> [[(String, Types)]] -> Types
+getType	s l []						= Err
+getType s l ([]:list)				= getType s l list
+getType s l (((s2,t):tup):list) 	| s == s2 	= t
+							  		| otherwise = getType s l (tup:list)
 
 getTreeType :: Tree -> [[(String, Types)]] -> Types
-getTreeType (VarNode s) list 		= getType s list
+getTreeType (VarNode s l) list 		= getType s l list
 getTreeType (OpNode s t1 t2) list 	= getTreeType t1 list
 getTreeType _ list 			 		= Err
 
 isAccesible :: [[(String, Types)]] -> Tree -> Bool
 isAccesible [] a								= False
 isAccesible ([]:x:list) a 						= isAccesible (x:list) a 
-isAccesible (((s2,_):tup):list) (VarNode s)  	| s == s2 	= True
-												| otherwise = isAccesible (tup:list) (VarNode s) 
+isAccesible (((s2,_):tup):list) (VarNode s l)  	| s == s2 	= True
+												| otherwise = isAccesible (tup:list) (VarNode s l) 
 isAccesible list (BootyNode t1 t2)				= isAccesible list t1 && isAccesible list t2
 isAccesible list (DoubloonNode t1 t2) 			= isAccesible list t1 && isAccesible list t2
 isAccesible list (BoolNode t1 t2) 				= isAccesible list t1 && isAccesible list t2
@@ -98,6 +98,6 @@ isAccesible list (ZupaNode s xs)				= all (==True) (map (isAccesible list) xs)
 isAccesible	list _								= False
 
 getValue :: Tree -> String
-getValue (VarNode s) = s
+getValue (VarNode s _) = s
 getValue (OpNode s _ _) = s
 getValue (FuncNode s _ _) = s
