@@ -5,18 +5,40 @@ import Debug.Trace
 import Grammar
 
 typeChecker :: [[(String, Types)]] -> Tree -> Bool
-typeChecker list (IfNode t1 xs)	 	= all (==True) (map (typeChecker newList) allNodes) && checkType t1 Boo list
-									where
-								 		newList 	= (addToScope xs): list
-								 		allNodes 	= getOtherNodes xs
-typeChecker list (WhileNode t1 xs)	= all (==True) (map (typeChecker newList) allNodes) && checkType t1 Boo list
-									where
-										newList 	= (addToScope xs): list
-										allNodes	= getOtherNodes xs
-typeChecker list (ZupaNode s xs) 	= all (==True) (map (typeChecker newList) allNodes)
-								 	where
-								 		newList 	= (addToScope xs): list
-								 		allNodes 	= getOtherNodes xs
+typeChecker	list (BootyNode t1 t2)		= (addToScope [BootyNode t1 t2]) /= []
+typeChecker	list (DoubloonNode t1 t2)	= (addToScope [DoubloonNode t1 t2]) /= []
+typeChecker	list (BoolNode t1 t2)		= (addToScope [BoolNode t1 t2]) /= []
+typeChecker list (TreasureNode t1 t2)	= (addToScope [TreasureNode t1 t2]) /= []
+typeChecker list (OpNode "+" t1 t2)		= (checkType (OpNode "+" t1 t2) Int list) || (checkType (OpNode "+" t1 t2) Str list)
+typeChecker list (OpNode s t1 t2)		= checkType (OpNode s t1 t2) Int list
+typeChecker list (BoolExNode n)			= checkType (BoolExNode n) Boo list
+typeChecker list (GiftNode t1)			= checkType t1 Int list
+typeChecker list (PlunderNode t1)		= checkType t1 Int list
+typeChecker list (IfNode t1 xs)	 		= all (==True) (map (typeChecker newList) allNodes) && checkType t1 Boo list
+										where
+								 			newList 	= (addToScope xs): list
+								 			allNodes 	= getOtherNodes xs
+typeChecker list (ElseNode xs)			= all (==True) (map (typeChecker newList) allNodes)
+										where
+											newList 	= (addToScope xs): list
+											allNodes	= getOtherNodes xs
+typeChecker list (ForNode t1 t2 t3 xs)	= all (==True) (map (typeChecker newList) allNodes) && typeChecker list t1 && typeChecker list t2 && typeChecker list t3
+										where
+								 			newList 	= (addToScope xs): list
+								 			allNodes 	= getOtherNodes xs
+typeChecker list (WhileNode t1 xs)		= all (==True) (map (typeChecker newList) allNodes) && checkType t1 Boo list
+										where
+											newList 	= (addToScope xs): list
+											allNodes	= getOtherNodes xs
+typeChecker list (FuncNode s xs xs')	= all (==True) (map (typeChecker list) xs) && all (==True) (map (typeChecker newList) allNodes)
+										where
+								 			newList 	= (addToScope (xs++xs')): list
+								 			allNodes 	= getOtherNodes xs'
+typeChecker list (FuncValNode t1 t2)	= (addToScope [FuncValNode t1 t2]) /= []
+typeChecker list (ZupaNode s xs) 		= all (==True) (map (typeChecker newList) allNodes)
+								 		where
+								 			newList 	= (addToScope xs): list
+								 			allNodes 	= getOtherNodes xs
 typeChecker list _ = True
 
 getOtherNodes :: [Tree] -> [Tree]
@@ -38,14 +60,24 @@ addToScope ((BoolNode (VarNode s l) t): xs)		| checkType t Boo []	= (s, Boo): ad
 												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Boolean! Line:" ++ (show l))
 addToScope ((TreasureNode (VarNode s l) t): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
 												| otherwise 			= error ("Incorrect Type: " ++ (getValue t) ++ " is not a Boolean! Line:" ++ (show l))
+addToScope ((FuncValNode (VarNode s l) (VarNode s2 l2)): xs)	
+												= (s, (getTypeFromString s2)): addToScope xs 
 addToScope (_: xs)								= addToScope xs
+
+getTypeFromString :: String -> Types
+getTypeFromString s
+	| s == "String" = Str
+	| s == "Int"	= Int
+	| s == "Bool"	= Boo
+	| s == "Array"	= Arr
+	| otherwise		= Err
 
 checkType :: Tree -> Types -> [[(String, Types)]] -> Bool
 checkType (VarNode s l) Int list 					| all (==True) (map (isNumber) s) || getType s l list == Int 	= True
 													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an Integer! Line:" ++ (show l))
 checkType (VarNode s l) Str list 					| isString s || getType s l list == Str						= True
 													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an String! Line:" ++ (show l))
-checkType (VarNode s l) Boo list 					| s == "Aye" || s == "Nay" || getType s l list == Boo			= True
+checkType (VarNode s l) Boo list 					| s == "Aye" || s == "Nay" || getType s l list == Boo		= True
 													| otherwise													= error ("Incorrect Type: " ++ s ++ " is not an Boolean! Line:" ++ (show l))
 checkType (OpNode s t1 t2) Int list					| checkType t1 Int list && checkType t2 Int list 			= True
 													| otherwise													= error ("Incorrect Type: " ++ (getValue t1) ++ " and " ++ (getValue t2) ++ " are not Integers!")

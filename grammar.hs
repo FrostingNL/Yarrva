@@ -251,7 +251,7 @@ test = unlines ["fleet Prog {",
 			   "    doubloon b be 2+3, Arrr!",
 			   "    booty c be \"SDsD\", Arrr!",
 			   "    bool d be Aye, Arrr!",
-			   "    parley (c be b) {",
+			   "    parley (c be \"SDsD\") {",
 			   "        doubloon c be 1, Arrr!",
 			   "    }",
 			   "}"
@@ -264,7 +264,7 @@ test2 = unlines ["fleet Program {",
 
 tokens = tokenizer START 0
 
-test0 = parse grammar Program $ tokens test
+test0 = parse grammar Program $ tokens sampleFunction
 test1 = parse grammar Program $ tokens test2
 
 showTestTree = showRoseTree $ toRoseTree1 test0
