@@ -11,6 +11,7 @@ grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
 	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark], 										-- Var declaration
+				[Array],
 				[ifExprKey, lpar, BoolExpr, rpar, Block],														-- If Expression
 				[elseKey, Block],																				-- Else Expression
 				[printKey, Expr, NoCat endmark],																-- Print Expression
@@ -22,6 +23,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[returnKey, Opt [Expr], NoCat endmark],															-- Return Expression
 				[functionKey, idf, lpar, FValues, rpar, Block],													-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
+	Array   -> [[arrayKey, idf, NoCat equalsKey, lbra, ArrayList, rbra, NoCat endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
 	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
@@ -41,8 +43,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[SyntCat Bool],																					-- A boolean
 				[idf],																							-- An identifier
 				[SyntCat String],																				-- A string
-				[Func],	
-				[lbra, ArrayList, rbra]]
+				[Func]]
 	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
@@ -126,7 +127,7 @@ tokenizer KW l ('.':xs) = (point, ['.'], l): tokenizer KW l xs
 tokenizer KW l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark, l): tokenizer KW l xs
 tokenizer KW l (',':xs) = (comma, [','], l): tokenizer KW l xs
 tokenizer KW l (x:xs)
-	| isArray (x:restArray)							= (ArrayList, x:restArray, l) :				otherTokensWithoutArray
+	| isArray (x:restArray)							= createArrayTokens (x:restArray) l ++		otherTokensWithoutArray
 	| isBoolean (x:restWord)						= (Bool, x:restWord, l) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord, l): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString, l):				otherTokens
@@ -142,6 +143,14 @@ tokenizer KW l (x:xs)
 		restString 	= getRest xs
 		otherTokens = tokenizer KW l restString
 		otherTokensWithoutArray = tokenizer KW l (rmArray xs)
+
+createArrayTokens :: String -> Int -> [(Alphabet, String, Int)]
+createArrayTokens [] _ = []
+createArrayTokens (',':xs) l = (comma, ",", l) : createArrayTokens xs l
+createArrayTokens ('[':xs) l = (lbra, "[", l) : createArrayTokens xs l
+createArrayTokens (']':xs) l = (rbra, "]", l) : createArrayTokens xs l
+createArrayTokens (x:xs) l  | isNumber x = (Nmbr, [x], l) : createArrayTokens xs l
+						    | otherwise = (Idf, [x], l) : createArrayTokens xs l
 
 rmArray :: String -> String
 rmArray [] = []
@@ -266,7 +275,7 @@ test2 = unlines ["fleet Program {",
 		"doubloon c be n +m, Arrr!",
 		"booty d be \"Hello\", Arrr!",
 		"bool h be Aye, Arrr!",
-		"treasure a be [1,3,a], Arrr!",
+		"treasure a be [1,3,5], Arrr!",
 		"}"
 		]
 
