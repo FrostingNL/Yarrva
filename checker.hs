@@ -5,16 +5,16 @@ import Debug.Trace
 import Grammar
 
 typeChecker :: [[(String, Types)]] -> Tree -> Bool
-typeChecker	list (BootyNode t1 t2)		= (addToScope [BootyNode t1 t2]) /= []
-typeChecker	list (DoubloonNode t1 t2)	= (addToScope [DoubloonNode t1 t2]) /= []
-typeChecker	list (BoolNode t1 t2)		= (addToScope [BoolNode t1 t2]) /= []
-typeChecker list (TreasureNode t1 t2)	= (addToScope [TreasureNode t1 t2]) /= []
-typeChecker list (OpNode "+" t1 t2)		= (checkType (OpNode "+" t1 t2) Int list) || (checkType (OpNode "+" t1 t2) Str list)
-typeChecker list (OpNode s t1 t2)		= checkType (OpNode s t1 t2) Int list
-typeChecker list (BoolExNode n)			= checkType (BoolExNode n) Boo list
-typeChecker list (GiftNode t1)			= checkType t1 Int list
-typeChecker list (PlunderNode t1)		= checkType t1 Int list
-typeChecker list (IfNode t1 xs)	 		= all (==True) (map (typeChecker newList) allNodes) && checkType t1 Boo list
+typeChecker	list (BootyNode t1 t2)		= trace (show list) $ (addToScope [BootyNode t1 t2]) /= []
+typeChecker	list (DoubloonNode t1 t2)	= trace (show list) $ (addToScope [DoubloonNode t1 t2]) /= []
+typeChecker	list (BoolNode t1 t2)		= trace (show list) $ (addToScope [BoolNode t1 t2]) /= []
+typeChecker list (TreasureNode t1 t2)	= trace (show list) $ (addToScope [TreasureNode t1 t2]) /= []
+typeChecker list (OpNode "+" t1 t2)		= trace (show list) $ (checkType (OpNode "+" t1 t2) Int list) || (checkType (OpNode "+" t1 t2) Str list)
+typeChecker list (OpNode s t1 t2)		= trace (show list) $ checkType (OpNode s t1 t2) Int list
+typeChecker list (BoolExNode n)			= trace (show list) $ checkType (BoolExNode n) Boo list
+typeChecker list (GiftNode t1)			= trace (show list) $ checkType t1 Int list
+typeChecker list (PlunderNode t1)		= trace (show list) $ checkType t1 Int list
+typeChecker list (IfNode t1 xs)	 		= trace ("IF: " ++ (show list) ++ "\n" ++ (show newList)) $ all (==True) (map (typeChecker newList) allNodes) && checkType t1 Boo list
 										where
 								 			newList 	= (addToScope xs): list
 								 			allNodes 	= getOtherNodes xs
@@ -35,7 +35,7 @@ typeChecker list (FuncNode s xs xs')	= all (==True) (map (typeChecker list) xs) 
 								 			newList 	= (addToScope (xs++xs')): list
 								 			allNodes 	= getOtherNodes xs'
 typeChecker list (FuncValNode t1 t2)	= (addToScope [FuncValNode t1 t2]) /= []
-typeChecker list (ZupaNode s xs) 		= all (==True) (map (typeChecker newList) allNodes)
+typeChecker list (ZupaNode s xs) 		= trace (show newList) $ all (==True) (map (typeChecker newList) allNodes)
 								 		where
 								 			newList 	= (addToScope xs): list
 								 			allNodes 	= getOtherNodes xs
@@ -46,9 +46,8 @@ getOtherNodes []						= []
 getOtherNodes ((BootyNode _ _): xs) 	= getOtherNodes xs
 getOtherNodes ((DoubloonNode _ _): xs)	= getOtherNodes xs
 getOtherNodes ((BoolNode _ _): xs)		= getOtherNodes xs
+getOtherNodes ((TreasureNode _ _): xs)  = getOtherNodes xs
 getOtherNodes (n:xs)					= n: getOtherNodes xs
-
-as (ZupaNode s xs) = addToScope xs
 
 addToScope :: [Tree] -> [(String, Types)]
 addToScope [] 									= []
