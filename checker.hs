@@ -4,6 +4,14 @@ import Data.List
 import Debug.Trace
 import Grammar
 
+getScope :: [[(String, Types)]] -> Tree -> [[(String, Types)]] 
+getScope list (IfNode t1 xs)		= nub $ concat $ map (getScope ((addToScope xs): list)) (getOtherNodes xs)
+getScope list (ElseNode xs)			= nub $ concat $ map (getScope ((addToScope xs): list)) (getOtherNodes xs)
+getScope list (ForNode t1 t2 t3 xs) = nub $ concat $ map (getScope ((addToScope xs): list)) (getOtherNodes xs)
+getScope list (WhileNode t1 xs)		= nub $ concat $ map (getScope ((addToScope xs): list)) (getOtherNodes xs)
+getScope list (FuncNode s xs xs')	= nub $ concat $ map (getScope ((addToScope xs): list)) (getOtherNodes xs')
+getScope list (ZupaNode s xs)		= trace (show (addToScope xs)) $ nub $ map (getScope ((addToScope xs): list)) (getOtherNodes xs) 
+
 typeChecker :: [[(String, Types)]] -> Tree -> Bool
 typeChecker	list (BootyNode t1 t2)		= trace (show list) $ (addToScope [BootyNode t1 t2]) /= []
 typeChecker	list (DoubloonNode t1 t2)	= trace (show list) $ (addToScope [DoubloonNode t1 t2]) /= []
