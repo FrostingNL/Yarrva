@@ -10,7 +10,7 @@ import System.IO
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
-	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark],										-- Var declaration
+	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark], 										-- Var declaration
 				[ifExprKey, lpar, BoolExpr, rpar, Block],														-- If Expression
 				[elseKey, Block],																				-- Else Expression
 				[printKey, Expr, NoCat endmark],																-- Print Expression
@@ -42,7 +42,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[SyntCat String],																				-- A string
 				[Func],	
-				[SyntCat Array]]																				-- A function
+				[lbra, ArrayList, rbra]]
+	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
 	Assign 	-> [[Opt [Var], idf, NoCat equalsKey, Expr]]														-- Assign decleration
@@ -125,7 +126,7 @@ tokenizer KW l ('.':xs) = (point, ['.'], l): tokenizer KW l xs
 tokenizer KW l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark, l): tokenizer KW l xs
 tokenizer KW l (',':xs) = (comma, [','], l): tokenizer KW l xs
 tokenizer KW l (x:xs)
-	| isArray (x:restArray)							= (Array, x:restArray, l) :					otherTokensWithoutArray
+	| isArray (x:restArray)							= (ArrayList, x:restArray, l) :				otherTokensWithoutArray
 	| isBoolean (x:restWord)						= (Bool, x:restWord, l) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord, l): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString, l):				otherTokens
@@ -260,7 +261,17 @@ test = unlines ["fleet Prog {",
 			   "}"
 			   ]
 
+
 test2 = unlines ["fleet Program {",	
+		"doubloon c be n +m, Arrr!",
+		"booty d be \"Hello\", Arrr!",
+		"bool h be Aye, Arrr!",
+		"treasure a be [1,3,a], Arrr!",
+		"}"
+		]
+
+
+test3 = unlines ["fleet Program {",	
 		"doubloon c be 5, Arrr!",
 				"}"
 				]
@@ -273,7 +284,7 @@ test1 = parse grammar Program $ tokens test2
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
 
-printTupList :: [(Alphabet, String)] -> IO String
+printTupList :: [(Alphabet, String, Int)] -> IO String
 printTupList [t] = do return (show t)
 printTupList (t:tup) = do
 						putStrLn (show t)
@@ -292,6 +303,7 @@ file f = do
 	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
 convert :: ParseTree -> Tree
+
 convert (PLeaf (a, s, l)) = VarNode s l
 convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x: x':[]))			= BootyNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x: x':[]))		= DoubloonNode (convert x) (convert x')
@@ -370,4 +382,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test0
+showConvertedTree = showRoseTree $ toRTree $ convert test1
