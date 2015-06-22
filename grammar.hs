@@ -42,8 +42,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[SyntCat String],																				-- A string
 				[Func],	
-				[lbra, ArrayList, rbra]]
-	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
+				[ArrayList]]
+	ArrayList->[[SyntCat ArrayList]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
 	Assign 	-> [[Opt [Var], idf, NoCat equalsKey, Expr]]														-- Assign decleration
@@ -247,39 +247,38 @@ sampleFunction = unlines ["fleet SampleFunction {",
 						 "}"
 						]
 
-test = unlines ["fleet Prog {",
-			   "    doubloon a be 1, Arrr!",
-			   "    doubloon b be 2+3, Arrr!",
-			   "    booty c be \"SDsD\", Arrr!",
-			   "    bool d be Aye, Arrr!",
-			   "    parley (c be \"SDsD\") {",
-			   "        doubloon c be 1, Arrr!",
-			   "    }",
-			   "    parley (c be \"SDsD\") {",
-			   "        bool r be Nay, Arrr!",
-			   "    }",
+test = unlines ["fleet Prog {",	
+			   "    ship a() {",
+				"   }",
+				"   doubloon int be 1, Arrr!",
+				"   ship b() {",
+				"   }",
+				"   parley (int be 1) { }",
 			   "}"
 			   ]
 
 
 test2 = unlines ["fleet Program {",	
-		"doubloon c be n +m, Arrr!",
-		"booty d be \"Hello\", Arrr!",
-		"bool h be Aye, Arrr!",
 		"treasure a be [1,3,a], Arrr!",
 		"}"
 		]
 
 
 test3 = unlines ["fleet Program {",	
-		"doubloon c be 5, Arrr!",
+				"    doubloon a be 1, Arrr!",
+			   "    doubloon b be 2+3, Arrr!",
+			   "    booty c be \"SDsD\", Arrr!",
+			   "    bool d be Aye, Arrr!",
+			   "    parley (c be \"SDsD\") {",
+			   "        doubloon c be 1, Arrr!",
+			   "    }",
 				"}"
 				]
 
 tokens = tokenizer START 0
 
 test0 = parse grammar Program $ tokens test
-test1 = parse grammar Program $ tokens test2
+test1 = parse grammar Program $ tokens test3
 
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
