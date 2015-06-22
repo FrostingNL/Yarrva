@@ -42,6 +42,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Func
 		| FValues
 		| Var
+		| Array
 
 		deriving (Eq,Show)
 
