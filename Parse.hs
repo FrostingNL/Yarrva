@@ -33,7 +33,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Nmbr
 		| Bool
 		| String
-		| Array
+		| ArrayList
 		| Type
 		| TypeName
 		| Op

@@ -10,7 +10,7 @@ import System.IO
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, Block]]																			-- The Main Program
-	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark],										-- Var declaration
+	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark], 										-- Var declaration
 				[ifExprKey, lpar, BoolExpr, rpar, Block],														-- If Expression
 				[elseKey, Block],																				-- Else Expression
 				[printKey, Expr, NoCat endmark],																-- Print Expression
@@ -42,7 +42,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[SyntCat String],																				-- A string
 				[Func],	
-				[SyntCat Array]]																				-- A function
+				[ArrayList]]
+	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
 	Assign 	-> [[Opt [Var], idf, NoCat equalsKey, Expr]]														-- Assign decleration
@@ -124,7 +125,7 @@ tokenizer KW ('.':xs) = (point, ['.']): tokenizer KW xs
 tokenizer KW (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark): tokenizer KW xs
 tokenizer KW (',':xs) = (comma, [',']): tokenizer KW xs
 tokenizer KW (x:xs) 
-	| isArray (x:restArray)							= (Array, x:restArray) :				otherTokensWithoutArray
+	| isArray (x:restArray)							= (ArrayList, x:restArray)	: otherTokensWithoutArray
 	| isBoolean (x:restWord)						= (Bool, x:restWord) : 					otherTokens
 	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord): 	otherTokens
 	| isString (x:restOfString)						= (String, x:restOfString):				otherTokens
@@ -261,6 +262,8 @@ test = concat ["fleet Prog {",
 
 test2 = concat ["fleet Program {",	
 		"doubloon c be n +m, Arrr!",
+		"booty d be \"Hello\", Arrr!",
+		"bool h be Aye, Arrr!",
 		"treasure a be [1,3,4], Arrr!",
 		"doubloon c be 5, Arrr!",
 				"}"
@@ -297,7 +300,7 @@ convert (PLeaf (a, s)) = VarNode s
 convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty")]): x: x':[]))				= BootyNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon")]): x: x':[]))		= DoubloonNode (convert x) (convert x')
 convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool")]): x: x':[]))				= BoolNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))			= TreasureNode (convert x) (convert x')
+convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure")]): x: x':[]))		= TreasureNode (convert x) (convert x')
 convert (PNode _ (x: (PLeaf (Op,s)): x': []))											= OpNode 	s (convert x) (convert x')
 convert (PNode _ [PLeaf (a, s)])														| s == "Doubloon" 	= VarNode "Int"
 																						| s == "Booty"		= VarNode "String"
@@ -371,4 +374,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test0
+showConvertedTree = showRoseTree $ toRTree $ convert test1
