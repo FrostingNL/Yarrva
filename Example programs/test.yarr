@@ -1,3 +1,9 @@
 fleet Fleet {
-	parrot ("Land ho!"), Arrr!
+	doubloon a be 1, Arrr!
+	parley(a be 1){
+		bool b be Aye, Arrr!
+		parley(b be Aye){
+			doubloon c be 5, Arrr!
+		}
+	}
 }
