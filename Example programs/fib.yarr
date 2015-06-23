@@ -1,5 +1,5 @@
 fleet Fib {
-	ship fib(booty n be Doubloon) {
+	ship fib(doubloon n) {
 		parley(n be 1) {
 			avast 1, Arrr!
 		}

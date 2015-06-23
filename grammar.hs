@@ -278,14 +278,10 @@ test2 = unlines ["fleet Program {",
 		]
 
 
-test3 = unlines ["fleet Program {",	
+test3 = unlines ["fleet Fleet {",
 				"    doubloon a be 1, Arrr!",
-			   "    doubloon b be 2+3, Arrr!",
-			   "    booty c be \"SDsD\", Arrr!",
-			   "    bool d be Aye, Arrr!",
-			   "    parley (c be \"SDsD\") {",
-			   "        doubloon c be 1, Arrr!",
-			   "    }",
+				"    doubloon b be 2, Arrr!",
+				"    doubloon c be a+b, Arrr!",
 				"}"
 				]
 
@@ -395,4 +391,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test0
+showConvertedTree = showRoseTree $ toRTree $ convert test1

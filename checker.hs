@@ -1,3 +1,5 @@
+module Checker where
+
 import Data.Char
 import FPPrac.Trees
 import Data.List
