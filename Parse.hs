@@ -7,6 +7,8 @@ import Debug.Trace
 import Data.List
 import FPPrac.Trees
 
+doPrint = False
+
 
 -- Embedded language for alphabet: the first 10 clauses should not be removed, the last three can be replaced by your own.
 data Alphabet =	  Symbol     String		-- Token given ("char" specific for this example)
@@ -117,7 +119,7 @@ parserGen gr [] (nt0,ts,tokens) = [(PNode nt0 ts, tokens)]
 parserGen _  _  ( _ , _,  []  ) = []
 
 parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
- = case nt of
+ | doPrint = case nt of
 	Symbol str'	->  (if (str==str')
 				then traceShow ("success: " ++ str)
                                      (parserGen gr rule (nt0,ts,tokens))
@@ -151,6 +153,68 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
 				then traceShow ("success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
 				else traceShow ("expected: some property (...) -- found: " ++ show cat ++ " " ++ str)
+				     []
+				)
+
+	Alt nts mts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens)
+			    ++ parserGen gr (mts++rule) (nt0,ts,(cat,str,l):tokens)
+
+
+	Try nts mts	->  (if (parserGen gr nts (nt0,ts,(cat,str,l):tokens) /= [])
+				then (parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens))
+				else (parserGen gr (mts++rule) (nt0,ts,(cat,str,l):tokens))
+				)
+
+	Opt  nts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens)
+			    ++ parserGen gr  rule       (nt0,ts,(cat,str,l):tokens)
+
+	Rep0 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l):tokens)
+			    ++ parserGen gr  rule                      (nt0,ts,(cat,str,l):tokens)
+
+	Rep1 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l):tokens)
+
+
+
+
+	_		->    	--trace (show ((cat,str))) $
+					[  (t2,tokens2)	| r <- gr nt
+					   	, (t1,tokens1) <- parserGen gr r (nt,[],(cat,str,l):tokens)
+					   	, (t2,tokens2) <- parserGen gr rule (nt0,ts++[t1],tokens1)
+					   	]
+ | otherwise = case nt of
+	Symbol str'	->  (if (str==str')
+				then 
+                                     (parserGen gr rule (nt0,ts,tokens))
+				else 
+				     []
+				)
+
+	Keyword str'	->  (if (str==str')
+				then 
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				else 
+				     []
+				)
+
+	SyntCat cat'	->  (if (cat==cat')
+				then 
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				else 
+				     []
+				)
+
+
+	NoCat cat'	->  (if (cat==cat')
+				then 
+				     (parserGen gr rule (nt0, ts, tokens))
+				else 
+				     []
+				)
+
+	CheckToken p	->  (if (p (cat,str,l))
+				then 
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				else
 				     []
 				)
 

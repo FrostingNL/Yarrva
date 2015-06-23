@@ -12,9 +12,9 @@ prog = [
        -- bool b be 1
        Const 1 RegA,
        Store RegA (Addr 2),
-       -- parley(b be b)
-       Load (Addr 2) RegA,
-       Load (Addr 2) RegB,
+       -- parley(1)
+       Const 1 RegA,
+       Const 1 RegB,
        Compute NEq RegB RegA RegA
        Branch RegA Rel(11)
        -- doubloon c be 5

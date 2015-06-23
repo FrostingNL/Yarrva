@@ -8,11 +8,13 @@ import Parse
 import Grammar
 import Checker
 
+main = start "Example programs/test.yarr"
+
 start :: FilePath -> IO ()
 start input = do
 	inHandle <- openFile input ReadMode  
 	contents <- hGetContents inHandle
-	putStrLn ("SDSS: " ++ contents)
+	putStrLn (contents)
 	outHandle <- openFile "out.hs" WriteMode
 	hPutStr outHandle $ toSprockell [] $ convert $ parse grammar Program $ tokens contents
 	hClose inHandle
@@ -35,6 +37,12 @@ toSprockell list tree =
 								spacing ++ "Compute " ++ (getOp s) ++ " RegA RegB RegA,\n" ++
 								spacing ++ "Push RegA,\n"
 
+		(ZupaNode s xs)		-> 	"import Sprockell.System\n\nprog = [\n" ++ 
+								(concat (map (toSprockell (addToList xs 0)) xs)) ++ 
+								spacing ++ "-- END\n" ++ 
+								spacing ++ "EndProg\n" ++ 
+								spacing ++ "]\n\nmain = run 1 prog"
+
 		(IfNode (BoolExNode (Comp "be" t1 t2)) xs)	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
 														spacing ++ pNode list t2 ++ " RegA,\n" ++
 														spacing ++ pNode list t1 ++ " RegB,\n" ++
@@ -42,12 +50,13 @@ toSprockell list tree =
 														spacing ++ "Branch RegA Rel(" ++ (show (calcLen xs)) ++ ")\n" ++
 														(concat (map (toSprockell list) xs))
 
-		(ZupaNode s xs)			-> 	"import Sprockell.System\n\nprog = [\n" ++ 
-									(concat (map (toSprockell (addToList xs 0)) xs)) ++ 
-									spacing ++ "-- END\n" ++ 
-									spacing ++ "EndProg\n" ++ 
-									spacing ++ "]\n\nmain = run 1 prog"
-		_						-> 	""
+		(IfNode (BoolExNode (Boolean t1)) xs)		-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ ")\n" ++ 
+														spacing ++ pNode list t1 ++ " RegA,\n" ++
+														spacing ++ "Const 1 RegB,\n" ++
+														spacing ++ "Compute NEq RegB RegA RegA\n" ++
+														spacing ++ "Branch RegA Rel(" ++ (show (calcLen xs)) ++ ")\n" ++
+														(concat (map (toSprockell list) xs))
+		_					-> 	""
 
 printNode :: [(String, Int)] -> Tree -> String
 printNode list t@(VarNode _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t

@@ -6,6 +6,8 @@ import Data.List
 import Debug.Trace
 import Grammar
 
+--main = do putStr (show (typeAndScopeChecker $ convert test0))
+
 typeAndScopeChecker :: Tree -> Bool
 typeAndScopeChecker node = typeChecker [] node && inScope [] node
 
@@ -107,7 +109,7 @@ getStringFromType s
 
 checkType :: Tree -> Types -> [[(String, Types)]] -> Bool
 checkType tree Int list =
-	case tree of= 
+	case tree of 
 		n@(VarNode s l)  					| allT (map (isNumber) s) || getType s l list == Int 	-> True
 											| otherwise												-> wrongType n "Integer" l
 		(OpNode s t1 t2)					| checkType t1 Int list && checkType t2 Int list 		-> True

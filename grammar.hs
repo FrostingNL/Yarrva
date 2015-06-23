@@ -44,6 +44,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[SyntCat String],																				-- A string
 				[Func]]
+	Bool  	-> [[Alt [trueKey] [falseKey]]]
 	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
@@ -399,43 +400,42 @@ file :: FilePath -> IO ()
 file f = do  
 	handle <- openFile f ReadMode  
 	contents <- hGetContents handle
+	printTupList $ tokens contents
 	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
 convert :: ParseTree -> Tree
-
-convert (PLeaf (a, s, l)) = VarNode s l
-convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x: x':[]))			= BootyNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x: x':[]))		= DoubloonNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x: x':[]))				= BoolNode (convert x) (convert x')
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x: x':[]))		= TreasureNode (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Op,s, _)): x': []))										= OpNode 	s (convert x) (convert x')
-convert (PNode _ [PLeaf (a, s, l)])														| s == "Doubloon" 	= VarNode "Int" l
-																						| s == "Booty"		= VarNode "String" l
-																						| otherwise 		= VarNode s l
-convert (PNode _ [node])																= convert node
-convert (PNode _ ((PLeaf (Keyword "parley", s, _)): x: (PNode Block xs): []))			= IfNode 	(convert x) (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "heave", s, _)): (PNode Block xs): []))				= ElseNode  (map convert xs)
-convert (PNode _ (x: (PLeaf (Keyword "be",s, _)): x': []))								= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Keyword "below",s, _)): x': []))							= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ (x: (PLeaf (Keyword "above",s, _)): x': []))							= BoolExNode $ Comp s (convert x) (convert x')
-convert (PNode _ ((PLeaf (Keyword "navigate", s, _)): x: x': x'': (PNode Block xs): []))= ForNode 	(convert x) (convert x') (convert x'') (map convert xs)
-convert (PNode _ ((PLeaf (Keyword "whirlpool", s, _)): x: (PNode Block xs): []))		= WhileNode (convert x) (map convert xs)
-convert (PNode Program (x:(PLeaf (a,s, _)):(PNode Block xs):[]))						= ZupaNode 	s (map convert xs)
-convert (PNode _ ((PLeaf (Idf, "gift", _)):x:[])) 										= GiftNode 	(convert x)
-convert (PNode _ ((PLeaf (Idf, "plunder", _)):x:[])) 									= PlunderNode (convert x)
-convert (PNode _ ((PLeaf (Keyword "ship", _, _)): (PLeaf (Idf, s, _)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
-
-convert (PNode _ ((PLeaf (Keyword "treasure", _,_)):x:x':(PNode ArrayList vals):[])) = ArrayNode (convert x) (convert x') (map convert vals)
-
-convert (PNode _ ((PLeaf (Keyword "flagship", s, _)): (PNode Block xs): []))			= FuncNode 	s [] (map convert xs)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x:[]))				= FuncValNode (convert x) (VarNode "String" 0)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x:[]))			= FuncValNode (convert x) (VarNode "Int" 0)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x:[]))					= FuncValNode (convert x) (VarNode "Bool" 0)
-convert (PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x:[]))			= FuncValNode (convert x) (VarNode "Array" 0)
-convert (PNode _ ((PLeaf (Keyword "parrot", s, _)): x: []))								= PrintNode (convert x)
-convert (PNode _ ((PLeaf (Keyword "avast", s, _)): x: []))								= ReturnNode s (convert x)
-convert (PNode Func ((PLeaf (Idf, s, _)): xs))											= DoFuncNode s (map convert xs)
-convert (PNode _ (x: x': []))															= BootyNode (convert x) (convert x')
+convert tree = case tree of
+	(PLeaf (a, s, l)) -> VarNode s l
+	(PNode _ [PLeaf (a, s, l)])																					| s == "Doubloon" 	-> VarNode "Int" l
+																												| s == "Booty"		-> VarNode "String" l
+																												| otherwise 		-> VarNode s l
+	(PNode _ ((PLeaf (Idf, "gift", _)):x:[])) 																	-> GiftNode 	(convert x)
+	(PNode _ ((PLeaf (Idf, 	"plunder", _)):x:[])) 																-> PlunderNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "parrot", s, _)): x: []))															-> PrintNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "avast", s, _)): x: []))															-> ReturnNode s (convert x)
+	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x: x':[]))										-> BootyNode 	(convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x: x':[]))											-> BoolNode 	(convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Op,s, _)): x': []))																	-> OpNode s 	(convert x) (convert x')
+	(PNode _ ((PLeaf (Keyword "parley", s, _)): x: (PNode Block xs): []))										-> IfNode 		(convert x) (map convert xs)
+	(PNode _ ((PLeaf (Keyword "whirlpool", s, _)): x: (PNode Block xs): []))									-> WhileNode 	(convert x) (map convert xs)
+	(PNode _ ((PLeaf (Keyword "treasure", _,_)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
+	(PNode _ ((PLeaf (Keyword "navigate", s, _)): x: x': x'': (PNode Block xs): []))							-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "ship", _, _)): (PLeaf (Idf, s, _)): (PNode FValues xs'):(PNode Block xs): [])) 	-> FuncNode s 	(map convert xs') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "heave", s, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
+	(PNode Program (x:(PLeaf (a,s, _)):(PNode Block xs):[]))													-> ZupaNode s 	(map convert xs)
+	(PNode Func ((PLeaf (Idf, s, _)): xs))																		-> DoFuncNode s (map convert xs)
+	(PNode _ ((PLeaf (Keyword "flagship", s, _)): (PNode Block xs): []))										-> FuncNode s [] (map convert xs)
+	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "String" 0)
+	(PNode _ (x: (PLeaf (Keyword "be",s, _)): x': []))															-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "below",s, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "above",s, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ ((PNode Bool [x]): []))																			-> BoolExNode $ Boolean (convert x)
+	(PNode _ [node])																							-> convert node
 
 data Tree = VarNode 	String Int
 		  | BootyNode 	Tree Tree
@@ -487,3 +487,5 @@ toRTree (ArrayNode t1 t2 list)		= RoseNode "arrayDecl" ([toRTree t1, toRTree t2]
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
 showConvertedTree = showRoseTree $ toRTree $ convert test0	
+
+--main = file "Example programs/test.yarr"
