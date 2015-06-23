@@ -23,7 +23,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[returnKey, Opt [Expr], NoCat endmark],															-- Return Expression
 				[functionKey, idf, lpar, FValues, rpar, Block],													-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
-	Array   -> [[arrayKey, idf, NoCat equalsKey, lbra, ArrayList, rbra, NoCat endmark]]
+	Array   -> [[arrayKey, Type, idf, NoCat equalsKey, lbra, ArrayList, rbra, NoCat endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
 	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [lesserKey] [greaterKey]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
@@ -51,8 +51,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Func 	-> [[idf, lpar, Opt [Expr, Rep0 [NoCat comma, Expr]], rpar]]										-- Function
 	Var 	-> [[intKey],
 				[boolKey],
-				[stringKey],
-				[arrayKey]]
+				[stringKey]]
 
 data Types 	= Int
 			| Boo
@@ -106,7 +105,7 @@ colon   = Symbol ":"
 point	= Symbol "."
 comma	= Symbol ","
 
-data State = START | ERROR | KW | KWWORD
+data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM
 
 tokenizer :: State -> Int -> String -> [Token]
 tokenizer _ _ [] = []
@@ -115,53 +114,78 @@ tokenizer s l ('\t':xs) = tokenizer s l xs
 tokenizer s l ('\n':xs) = tokenizer s (l+1) xs
 
 tokenizer ERROR l _ = error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l))
+tokenizer state l ('*':'*':xs) = tokenizer state l (rmLineComment xs)
+tokenizer state l ('>':'>':xs) = tokenizer state l (rmBlockComment xs)
+tokenizer state l ('b':'e':xs) = (equalsKey, "be", l) : tokenizer state l xs
+tokenizer state l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark, l): tokenizer START l xs
+tokenizer START l (x:xs) | isKeyword $ getWord (x:xs) 	= tokenizer KEY l (x:xs)
+						 | isString (getString (x:xs))  = tokenizer STR l (x:xs)
+						 | isNumber x 					= tokenizer NUM l (x:xs)
+						 | isGramSymbol x 				= tokenizer SYM l (x:xs)
+						 | isArray (x:xs)				= tokenizer ARRAY l (x:xs)
+						 | otherwise 				    = tokenizer IDF l (x:xs)
+tokenizer SYM l (x:xs) | elem x "+-*/" = (Op, [x], l) : tokenizer START l xs
+					   | otherwise = (getSymbol x, [x], l) : tokenizer START l xs
+tokenizer KEY l (x:xs) | keyword == intKey = newToken : tokenizer NUM l restString
+					   | keyword == boolKey = newToken : tokenizer BOOLID l restString
+					   | keyword == stringKey = newToken : tokenizer STRID l restString
+					   | otherwise = newToken : tokenizer START l restString
+						 where 
+						 	restString = getRest xs
+						 	newToken = (keyword, restWord, l)
+						 	keyword = getKeyword restWord
+						 	restWord = getWord (x:xs)
+tokenizer BOOLID l str = (Idf, getWord str, l) : tokenizer BOOL l (getRest str)
+tokenizer BOOL l str = (Bool, getWord str, l) : tokenizer BOOL l (getRest str)
+tokenizer STRID l str = (Idf, getWord str, l) : tokenizer STR l (getRest str)
+tokenizer STR l str | isString (getString str) = (String, getString str, l) : tokenizer START l (getRest str)
+					| otherwise = tokenizer ERROR l str
+tokenizer ARRAY l str = (arrayKey, "treasure", l) : tokenizer ARRAYTYPE l str
+tokenizer ARRAYTYPE l (x:xs) | keyword == intKey = (Nmbr, restWord, l) : continueArray
+							 | keyword == boolKey = (Bool, restWord, l) : continueArray
+							 | keyword == stringKey = (String, restWord, l) : continueArray
+							 | otherwise = tokenizer ERROR l (x:xs)
+							 where 
+							 	restString = getRest xs
+							 	newToken = (keyword, restWord, l)
+							 	keyword = getKeyword restWord
+							 	restWord = getArrayType (x:xs)
+							 	continueArray = tokenizer ARRAYID l restString
+tokenizer ARRAYID l str = (Idf, getWord str, l) : tokenizer ARRAYELEM l (getRest str)
+tokenizer NUM l str | isNumber (str!!0) = (Nmbr, getNum str, l) : tokenizer START l (rmNum str) 
+					| otherwise = (Idf, getWord str, l) : tokenizer START l (getRest str)
+tokenizer IDF l str = (Idf, getWord str, l) : tokenizer START l (getRest str)
+tokenizer ARRAYELEM l (x:xs)| isGramSymbol x = (getSymbol x, [x], l) : tokenizer ARRAYELEM l xs
+							| isNumber x = (Nmbr, getNum str, l) : tokenizer ARRAYELEM l (rmNum xs)
+							| isBoolean restWord = (Bool, restWord, l) : tokenizer ARRAYELEM l restString
+							| otherwise = (String, getString str, l) : tokenizer ARRAYELEM l restString
+							where 
+								str = (x:xs)
+								restWord = getUpTo (x:xs) [',', ']']
+								restString = rmUpTo xs [',', ']']
 
-tokenizer START l (x:xs) | isLowercase x = tokenizer KW l (x:xs)
-					   	 | otherwise = tokenizer ERROR l (x:xs)
+rmLineComment :: String -> String
+rmLineComment [] = []
+rmLineComment ('\n':xs) = xs
+rmLineComment (_:xs) = rmLineComment xs
 
-tokenizer KW l ('{':xs) = (lcbr, ['{'], l): tokenizer KW l xs
-tokenizer KW l ('}':xs) = (rcbr, ['}'], l): tokenizer KW l xs
-tokenizer KW l ('(':xs) = (lpar, ['('], l): tokenizer KW l xs
-tokenizer KW l (')':xs) = (rpar, [')'], l): tokenizer KW l xs
-tokenizer KW l ('.':xs) = (point, ['.'], l): tokenizer KW l xs
-tokenizer KW l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark, l): tokenizer KW l xs
-tokenizer KW l (',':xs) = (comma, [','], l): tokenizer KW l xs
-tokenizer KW l (x:xs)
-	| isArray (x:restArray)							= createArrayTokens (x:restArray) l ++		otherTokensWithoutArray
-	| isBoolean (x:restWord)						= (Bool, x:restWord, l) : 					otherTokens
-	| isKeyword (x:restWord) 						= (Keyword (x:restWord), x:restWord, l): 	otherTokens
-	| isString (x:restOfString)						= (String, x:restOfString, l):				otherTokens
-	| elem x "+-*/"									= (Op, [x], l):								tokenizer KW l (restWord ++ restString) 
-	| isNumber x									= (Nmbr, x:restNumber, l): 					otherTokens
-	| isLetter x									= (Idf, x:restWord, l):					 	otherTokens
-	| otherwise 									= tokenizer ERROR l (x:xs)
-	where
-		restArray 	= getArray xs
-		restOfString = getString xs
-		restNumber 	= getNum xs
-		restWord 	= getWord xs
-		restString 	= getRest xs
-		otherTokens = tokenizer KW l restString
-		otherTokensWithoutArray = tokenizer KW l (rmArray xs)
+rmBlockComment :: String -> String
+rmBlockComment [] = []
+rmBlockComment ('<':'<':xs) = xs
+rmBlockComment (_:xs) = rmBlockComment xs
 
-createArrayTokens :: String -> Int -> [(Alphabet, String, Int)]
-createArrayTokens [] _ = []
-createArrayTokens (',':xs) l = (comma, ",", l) : createArrayTokens xs l
-createArrayTokens ('[':xs) l = (lbra, "[", l) : createArrayTokens xs l
-createArrayTokens (']':xs) l = (rbra, "]", l) : createArrayTokens xs l
-createArrayTokens (x:xs) l  | isNumber x = (Nmbr, [x], l) : createArrayTokens xs l
-						    | otherwise = (Idf, [x], l) : createArrayTokens xs l
-
-rmArray :: String -> String
-rmArray [] = []
-rmArray (']':xs) = xs
-rmArray (x:xs) = rmArray xs
+rmNum :: String -> String
+rmNum [] = []
+rmNum (x:xs) | elem x "1234567890" = rmNum xs
+			 | otherwise = (x:xs)
 
 isArray :: String -> Bool
-isArray [] = False
-isArray ('[':xs) = contains xs ']'
-isArray (' ':xs) = isArray xs
-isArray (_:xs)	= False
+isArray str = elem (getArrayType str) allTypes && contains str '[' && contains str ']'
+
+getArrayType :: String -> String
+getArrayType (x:xs) 
+	| x /= '[' = x : getArrayType xs
+	| otherwise = []
 
 contains :: String -> Char -> Bool
 contains [] _ = False
@@ -199,8 +223,17 @@ rmEndMark :: String -> String
 rmEndMark [] = []
 rmEndMark (',':' ':'A':'r':'r':'r':'!':xs) = xs
 
+isGramSymbol :: Char -> Bool
+isGramSymbol s = elem s [snd y | y <- allSymbols]
+
+getSymbol :: Char -> Alphabet
+getSymbol x = [fst tup | tup <- allSymbols, snd tup == x]!!0
+
 isKeyword :: String -> Bool
-isKeyword s = elem s allKeywords
+isKeyword s = elem s [snd y | y <- allKeywords]
+
+getKeyword :: String -> Alphabet
+getKeyword x = [fst tup | tup <- allKeywords, snd tup == x]!!0
 
 isBoolean :: String -> Bool
 isBoolean word 
@@ -219,6 +252,15 @@ getWord (x:xs)
 	| elem x " +-*/,()." = []
 	| otherwise = x: getWord xs
 
+getUpTo :: String -> [Char] -> String
+getUpTo [] _ = []
+getUpTo (s:str) chars | elem s chars = []
+				      | otherwise = s : getUpTo str chars
+
+rmUpTo :: String -> [Char] -> String
+rmUpTo [] _ = []
+rmUpTo (s:str) chars | elem s chars = (s:str)
+					  | otherwise = rmUpTo str chars
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
@@ -229,8 +271,55 @@ getRest (x:xs)
 getEndmark :: String
 getEndmark = ", Arrr!"
 
-allKeywords :: [String]
-allKeywords = ["fleet", "flagship", "ship", "avast", "be", "treasure", "below", "above", "Aye", "Nay", "booty", "doubloon", "bool", "parley", "heave", "belay", "parrot", "God's speed", "whirlpool", "navigate"]
+allKeywords :: [(Alphabet, String)]
+allKeywords = [(progKey, "fleet"),
+				(functionKey, "ship"),
+				(mainKey, "flagship"),
+				(returnKey, "avast"),
+				(equalsKey, "be"),
+				(lesserKey, "below"),
+				(greaterKey, "above"),
+				(trueKey, "Aye"),
+				(falseKey, "Nay"),
+				(intKey, "doubloon"),
+				(boolKey, "bool"),
+				(stringKey, "booty"),
+				(arrayKey, "treasure"),
+				(ifExprKey, "parley"),
+				(elseKey, "heave"),
+				(breakKey, "belay"),
+				(printKey, "parrot"),
+				(continueKey, "God's speed"),
+				(whileKey, "whirlpool"),
+				(forKey, "navigate"),
+				(orKey, "or"),
+				(andKey, "'n"),
+				(incKey, "gift"),
+				(decKey, "plunder"),
+				(endmark, ", Arrr!")]
+
+allSymbols :: [(Alphabet, Char)]
+allSymbols = [ (lpar, '('),
+				(rpar, ')'),
+				(lbra, '['),
+				(rbra, ']'),
+				(lcbr, '{'),
+				(rcbr, '}'),
+				(eq, '='),
+				(lt, '<'),
+				(ge, '>'),
+				(plus, '+'),
+				(minus, '-'),
+				(times,  '*'),
+				(divide,  '/'),
+				(notSym,  '~'),
+				(colon,  ':'),
+				(point,  '.'),
+				(comma, ',')
+			]
+
+allTypes :: [String]
+allTypes = ["doubloon", "booty", "bool"]
 
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
@@ -256,6 +345,7 @@ sampleFunction = unlines ["fleet SampleFunction {",
 						 "}"
 						]
 
+
 test = unlines ["fleet Prog {",	
 			   "    ship a() {",
 				"   }",
@@ -268,14 +358,14 @@ test = unlines ["fleet Prog {",
 			   "}"
 			   ]
 
-
 test2 = unlines ["fleet Program {",	
 		"doubloon c be n +m, Arrr!",
 		"booty d be \"Hello\", Arrr!",
 		"bool h be Aye, Arrr!",
-		"treasure a be [1,3,5], Arrr!",
+		"doubloon[] a be [1,3,5], Arrr!",
 		"}"
 		]
+
 
 
 test3 = unlines ["fleet Fleet {",
@@ -392,4 +482,4 @@ toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test1
+showConvertedTree = showRoseTree $ toRTree $ convert test0	
