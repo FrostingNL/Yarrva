@@ -193,7 +193,9 @@ addAllToScope tree =
 		_					 -> []
 
 getValue :: Tree -> String
-getValue (VarNode s _) = s
+getValue (VarNode s l) 	| s == "Aye" = "1"
+					   	| s == "Nay" = "0"
+						| otherwise	= s
 getValue (OpNode s _ _) = s
 getValue (FuncNode s _ _) = s
 

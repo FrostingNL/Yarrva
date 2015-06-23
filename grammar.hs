@@ -369,8 +369,9 @@ test2 = unlines ["fleet Program {",
 
 test3 = unlines ["fleet Fleet {",
 				"    doubloon a be 1, Arrr!",
-				"    doubloon b be 2, Arrr!",
-				"    doubloon c be a+b, Arrr!",
+				"    parley(a be 1) {",
+				"        parrot(\"Aye\"), Arrr!",
+				"    }",
 				"}"
 				]
 
