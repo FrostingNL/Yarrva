@@ -345,16 +345,16 @@ sampleFunction = unlines ["fleet SampleFunction {",
 						 "}"
 						]
 
-test = unlines ["fleet Prog {",
-			   "    booty c be \"SDsD\", Arrr!",
-			   "    bool d be Aye, Arrr!",
-			   "    parley (c be \"SDsD\") {",
-			   "        doubloon a be 1, Arrr!",
-			   "        doubloon b be 2+3, Arrr!",
-			   "    }",
-			   "    parley (c be \"SDsD\") {",
-			   "        bool r be Nay, Arrr!",
-			   "    }",
+
+test = unlines ["fleet Prog {",	
+			   "    ship a() {",
+				"   }",
+				"   doubloon int be 1, Arrr!",
+				"   booty c be \"SDSD\", Arrr!",
+				"   ship b() {",
+				"       bool a be Aye, Arrr!",
+				"   }",
+				"   parley (int be 1) { }",
 			   "}"
 			   ]
 
@@ -367,10 +367,11 @@ test2 = unlines ["fleet Program {",
 		]
 
 
-test3 = unlines ["fleet Program {",	
-		"doubloon[] a be [1,3,5], Arrr!",
-		"a[0] be 5, Arrr!",
-		"doubloon newA be a[1], Arrr!",
+
+test3 = unlines ["fleet Fleet {",
+				"    doubloon a be 1, Arrr!",
+				"    doubloon b be 2, Arrr!",
+				"    doubloon c be a+b, Arrr!",
 				"}"
 				]
 
