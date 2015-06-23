@@ -109,60 +109,58 @@ data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID
 
 tokenizer :: State -> Int -> String -> [Token]
 tokenizer _ _ [] = []
-tokenizer s l (' ':xs) = tokenizer s l xs
-tokenizer s l ('\t':xs) = tokenizer s l xs
-tokenizer s l ('\n':xs) = tokenizer s (l+1) xs
+tokenizer s l (' ':xs) 							= tokenizer s l xs
+tokenizer s l ('\t':xs) 						= tokenizer s l xs
+tokenizer s l ('\n':xs)							= tokenizer s (l+1) xs
+tokenizer s l ('*':'*':xs) 						= tokenizer s l (rmLineComment xs)
+tokenizer s l ('>':'>':xs) 						= tokenizer s l (rmBlockComment xs)
+tokenizer s l ('b':'e':xs) 						= (equalsKey, "be", l) : tokenizer s l xs
+tokenizer s l (',':' ':'A':'r':'r':'r':'!':xs) 	= (endmark, getEndmark, l): tokenizer START l xs
+tokenizer state l str@(x:xs) =
+	case state of
+		ERROR 		->  error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l))
+		BOOLID		-> (Idf, getWord (str), l)   : tokenizer BOOL l (getRest str)
+		BOOL 		-> (Bool, getWord str, l)    : tokenizer BOOL l (getRest str)
+		STRID 		-> (Idf, getWord str, l)     : tokenizer STR l (getRest str)
+		ARRAY 		-> (arrayKey, "treasure", l) : tokenizer ARRAYTYPE l str
+		ARRAYID 	-> (Idf, getWord str, l) 	 : tokenizer ARRAYELEM l (getRest str)
+		IDF         -> (Idf, getWord str, l) 	 : tokenizer START l (getRest str)
+					-- START STATE
+		START 		| isKeyword $ getWord str 	 	-> tokenizer KEY l str
+				 	| isString $ getString str  	-> tokenizer STR l str
+				 	| isNumber x 					-> tokenizer NUM l str
+				 	| isGramSymbol x 				-> tokenizer SYM l str
+				 	| isArray str    				-> tokenizer ARRAY l str
+				 	| otherwise 				    -> tokenizer IDF l str
+					-- SYM STATE
+		SYM 		| elem x "+-*/" 				-> (Op, [x], l) : tokenizer START l xs
+			   		| otherwise 					-> (getSymbol x, [x], l) : tokenizer START l xs
+			   		-- NUM STATE
+		NUM 		| isNumber x 					-> (Nmbr, getNum str, l) : tokenizer START l (rmNum str) 
+					| otherwise 					-> tokenizer IDF l str
+					-- STR STATE
+		STR 		| isString (getString str) 		-> (String, getString str, l) : tokenizer START l (getRest str)
+					| otherwise 					-> tokenizer ERROR l str
+					-- KEY STATE
+		KEY 		| getKey str == intKey 			-> makeKeyToken str l : tokenizer NUM l (getRest xs)
+					| getKey str == boolKey 		-> makeKeyToken str l : tokenizer BOOLID l (getRest xs)
+					| getKey str == stringKey 		-> makeKeyToken str l : tokenizer STRID l (getRest xs)
+					| otherwise 					-> makeKeyToken str l : tokenizer START l (getRest xs)
+					-- ARRAYTYPE STATE
+		ARRAYTYPE 	| getAType str == intKey 		-> (Nmbr, getArrayType str, l)   : tokenizer ARRAYID l (getRest xs)
+					| getAType str == boolKey 		-> (Bool, getArrayType str, l)   : tokenizer ARRAYID l (getRest xs)
+					| getAType str == stringKey 	-> (String, getArrayType str, l) : tokenizer ARRAYID l (getRest xs)
+					| otherwise 					-> tokenizer ERROR l str
+					-- ARRAYELEM STATE
+		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l) 	  : tokenizer ARRAYELEM l xs
+					| isNumber x 					-> (Nmbr, getNum str, l) 	  : tokenizer ARRAYELEM l (rmNum xs)
+					| isBoolean $ getRestW str      -> (Bool, getRestW str, l) 	  : tokenizer ARRAYELEM l (rmUpTo xs [',', ']'])
+					| otherwise 					-> (String, getString str, l) : tokenizer ARRAYELEM l (rmUpTo xs [',', ']'])
 
-tokenizer ERROR l _ = error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l))
-tokenizer state l ('*':'*':xs) = tokenizer state l (rmLineComment xs)
-tokenizer state l ('>':'>':xs) = tokenizer state l (rmBlockComment xs)
-tokenizer state l ('b':'e':xs) = (equalsKey, "be", l) : tokenizer state l xs
-tokenizer state l (',':' ':'A':'r':'r':'r':'!':xs) = (endmark, getEndmark, l): tokenizer START l xs
-tokenizer START l (x:xs) | isKeyword $ getWord (x:xs) 	= tokenizer KEY l (x:xs)
-						 | isString (getString (x:xs))  = tokenizer STR l (x:xs)
-						 | isNumber x 					= tokenizer NUM l (x:xs)
-						 | isGramSymbol x 				= tokenizer SYM l (x:xs)
-						 | isArray (x:xs)				= tokenizer ARRAY l (x:xs)
-						 | otherwise 				    = tokenizer IDF l (x:xs)
-tokenizer SYM l (x:xs) | elem x "+-*/" = (Op, [x], l) : tokenizer START l xs
-					   | otherwise = (getSymbol x, [x], l) : tokenizer START l xs
-tokenizer KEY l (x:xs) | keyword == intKey = newToken : tokenizer NUM l restString
-					   | keyword == boolKey = newToken : tokenizer BOOLID l restString
-					   | keyword == stringKey = newToken : tokenizer STRID l restString
-					   | otherwise = newToken : tokenizer START l restString
-						 where 
-						 	restString = getRest xs
-						 	newToken = (keyword, restWord, l)
-						 	keyword = getKeyword restWord
-						 	restWord = getWord (x:xs)
-tokenizer BOOLID l str = (Idf, getWord str, l) : tokenizer BOOL l (getRest str)
-tokenizer BOOL l str = (Bool, getWord str, l) : tokenizer BOOL l (getRest str)
-tokenizer STRID l str = (Idf, getWord str, l) : tokenizer STR l (getRest str)
-tokenizer STR l str | isString (getString str) = (String, getString str, l) : tokenizer START l (getRest str)
-					| otherwise = tokenizer ERROR l str
-tokenizer ARRAY l str = (arrayKey, "treasure", l) : tokenizer ARRAYTYPE l str
-tokenizer ARRAYTYPE l (x:xs) | keyword == intKey = (Nmbr, restWord, l) : continueArray
-							 | keyword == boolKey = (Bool, restWord, l) : continueArray
-							 | keyword == stringKey = (String, restWord, l) : continueArray
-							 | otherwise = tokenizer ERROR l (x:xs)
-							 where 
-							 	restString = getRest xs
-							 	newToken = (keyword, restWord, l)
-							 	keyword = getKeyword restWord
-							 	restWord = getArrayType (x:xs)
-							 	continueArray = tokenizer ARRAYID l restString
-tokenizer ARRAYID l str = (Idf, getWord str, l) : tokenizer ARRAYELEM l (getRest str)
-tokenizer NUM l str | isNumber (str!!0) = (Nmbr, getNum str, l) : tokenizer START l (rmNum str) 
-					| otherwise = (Idf, getWord str, l) : tokenizer START l (getRest str)
-tokenizer IDF l str = (Idf, getWord str, l) : tokenizer START l (getRest str)
-tokenizer ARRAYELEM l (x:xs)| isGramSymbol x = (getSymbol x, [x], l) : tokenizer ARRAYELEM l xs
-							| isNumber x = (Nmbr, getNum str, l) : tokenizer ARRAYELEM l (rmNum xs)
-							| isBoolean restWord = (Bool, restWord, l) : tokenizer ARRAYELEM l restString
-							| otherwise = (String, getString str, l) : tokenizer ARRAYELEM l restString
-							where 
-								str = (x:xs)
-								restWord = getUpTo (x:xs) [',', ']']
-								restString = rmUpTo xs [',', ']']
+getAType str = getKeyword $ getArrayType str
+getKey str = getKeyword $ getWord str
+makeKeyToken str l = (getKeyword $ getWord str, getWord str, l)
+getRestW str = getUpTo str [',',']'] 
 
 rmLineComment :: String -> String
 rmLineComment [] = []
@@ -353,6 +351,7 @@ test = unlines ["fleet Prog {",
 				"   booty c be \"SDSD\", Arrr!",
 				"   ship b() {",
 				"       bool a be Aye, Arrr!",
+				"       doubloon[] array be [1,2,3,4], Arrr!",
 				"   }",
 				"   parley (int be 1) { }",
 			   "}"
@@ -424,6 +423,9 @@ convert (PNode Program (x:(PLeaf (a,s, _)):(PNode Block xs):[]))						= ZupaNode
 convert (PNode _ ((PLeaf (Idf, "gift", _)):x:[])) 										= GiftNode 	(convert x)
 convert (PNode _ ((PLeaf (Idf, "plunder", _)):x:[])) 									= PlunderNode (convert x)
 convert (PNode _ ((PLeaf (Keyword "ship", _, _)): (PLeaf (Idf, s, _)): (PNode FValues xs): (PNode Block xs'): [])) = FuncNode	s (map convert xs) (map convert xs')
+
+convert (PNode _ ((PLeaf (Keyword "treasure", _,_)):x:x':(PNode ArrayList vals):[])) = ArrayNode (convert x) (convert x') (map convert vals)
+
 convert (PNode _ ((PLeaf (Keyword "flagship", s, _)): (PNode Block xs): []))			= FuncNode 	s [] (map convert xs)
 convert (PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x:[]))				= FuncValNode (convert x) (VarNode "String" 0)
 convert (PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x:[]))			= FuncValNode (convert x) (VarNode "Int" 0)
@@ -452,6 +454,7 @@ data Tree = VarNode 	String Int
 		  | PrintNode	Tree
 		  | ReturnNode	String Tree
 		  | DoFuncNode	String [Tree]
+		  | ArrayNode   Tree Tree [Tree]
 		  | ZupaNode	String [Tree]
 		  deriving (Eq, Show)
 
@@ -479,6 +482,7 @@ toRTree (FuncValNode t1 t2)			= RoseNode "param" [toRTree t1, toRTree t2]
 toRTree (PrintNode t1)				= RoseNode "print" [toRTree t1]
 toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]
 toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
+toRTree (ArrayNode t1 t2 list)		= RoseNode "arrayDecl" ([toRTree t1, toRTree t2] ++ (map toRTree list))
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
 showConvertedTree = showRoseTree $ toRTree $ convert test0	
