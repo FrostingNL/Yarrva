@@ -1,10 +1,4 @@
 fleet Fleet {
-	doubloon a be 1, Arrr!
-	parley(a be 1){
-		bool b be Aye, Arrr!
-		parley(Aye){
-			doubloon c be 5, Arrr!
-			doubloon d be a+c, Arrr!
-		}
-	}
+	doubloon a be 5, Arrr!
+	a be 6, Arrr!
 }
