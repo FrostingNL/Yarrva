@@ -90,7 +90,7 @@ enz	  = Keyword "enzovoort"
 -- Token	- a 2-tuple of a non-terminal and a string, where the non-terminal
 --		  indicates to what syntactic category teh string belongs.
 
-type Token	= (Alphabet,String,Int)
+type Token	= (Alphabet,String,Int,Int)
 
 data ParseTree	= PLeaf Token			-- PLeaf: ParseTree-Leaf
                 | PNode Alphabet [ParseTree]	-- PNode: ParseTree-Node
@@ -118,7 +118,7 @@ parserGen gr [] (nt0,ts,tokens) = [(PNode nt0 ts, tokens)]
 
 parserGen _  _  ( _ , _,  []  ) = []
 
-parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
+parserGen gr (nt:rule) (nt0,ts,(cat,str, l,c):tokens)
  | doPrint = case nt of
 	Symbol str'	->  (if (str==str')
 				then traceShow ("success: " ++ str)
@@ -129,14 +129,14 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
 
 	Keyword str'	->  (if (str==str')
 				then traceShow ("success: " ++ str)
-				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
 				else traceShow ("expected: " ++ str' ++ " -- found: " ++ str)
 				     []
 				)
 
 	SyntCat cat'	->  (if (cat==cat')
 				then traceShow ("success: " ++ show cat ++ " " ++ str)
-				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
 				else traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
@@ -149,36 +149,36 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
 				     []
 				)
 
-	CheckToken p	->  (if (p (cat,str,l))
+	CheckToken p	->  (if (p (cat,str,l,c))
 				then traceShow ("success: " ++ show cat ++ " " ++ str)
-				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
 				else traceShow ("expected: some property (...) -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
 
-	Alt nts mts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens)
-			    ++ parserGen gr (mts++rule) (nt0,ts,(cat,str,l):tokens)
+	Alt nts mts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l,c):tokens)
+			    ++ parserGen gr (mts++rule) (nt0,ts,(cat,str,l,c):tokens)
 
 
-	Try nts mts	->  (if (parserGen gr nts (nt0,ts,(cat,str,l):tokens) /= [])
-				then (parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens))
-				else (parserGen gr (mts++rule) (nt0,ts,(cat,str,l):tokens))
+	Try nts mts	->  (if (parserGen gr nts (nt0,ts,(cat,str,l,c):tokens) /= [])
+				then (parserGen gr (nts++rule) (nt0,ts,(cat,str,l,c):tokens))
+				else (parserGen gr (mts++rule) (nt0,ts,(cat,str,l,c):tokens))
 				)
 
-	Opt  nts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens)
-			    ++ parserGen gr  rule       (nt0,ts,(cat,str,l):tokens)
+	Opt  nts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l,c):tokens)
+			    ++ parserGen gr  rule       (nt0,ts,(cat,str,l,c):tokens)
 
-	Rep0 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l):tokens)
-			    ++ parserGen gr  rule                      (nt0,ts,(cat,str,l):tokens)
+	Rep0 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l,c):tokens)
+			    ++ parserGen gr  rule                      (nt0,ts,(cat,str,l,c):tokens)
 
-	Rep1 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l):tokens)
+	Rep1 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l,c):tokens)
 
 
 
 
 	_		->    	--trace (show ((cat,str))) $
 					[  (t2,tokens2)	| r <- gr nt
-					   	, (t1,tokens1) <- parserGen gr r (nt,[],(cat,str,l):tokens)
+					   	, (t1,tokens1) <- parserGen gr r (nt,[],(cat,str,l,c):tokens)
 					   	, (t2,tokens2) <- parserGen gr rule (nt0,ts++[t1],tokens1)
 					   	]
  | otherwise = case nt of
@@ -191,14 +191,14 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
 
 	Keyword str'	->  (if (str==str')
 				then 
-				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
 				else 
 				     []
 				)
 
 	SyntCat cat'	->  (if (cat==cat')
 				then 
-				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
 				else 
 				     []
 				)
@@ -211,36 +211,36 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l):tokens)
 				     []
 				)
 
-	CheckToken p	->  (if (p (cat,str,l))
+	CheckToken p	->  (if (p (cat,str,l,c))
 				then 
-				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l)], tokens))
+				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
 				else
 				     []
 				)
 
-	Alt nts mts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens)
-			    ++ parserGen gr (mts++rule) (nt0,ts,(cat,str,l):tokens)
+	Alt nts mts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l,c):tokens)
+			    ++ parserGen gr (mts++rule) (nt0,ts,(cat,str,l,c):tokens)
 
 
-	Try nts mts	->  (if (parserGen gr nts (nt0,ts,(cat,str,l):tokens) /= [])
-				then (parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens))
-				else (parserGen gr (mts++rule) (nt0,ts,(cat,str,l):tokens))
+	Try nts mts	->  (if (parserGen gr nts (nt0,ts,(cat,str,l,c):tokens) /= [])
+				then (parserGen gr (nts++rule) (nt0,ts,(cat,str,l,c):tokens))
+				else (parserGen gr (mts++rule) (nt0,ts,(cat,str,l,c):tokens))
 				)
 
-	Opt  nts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l):tokens)
-			    ++ parserGen gr  rule       (nt0,ts,(cat,str,l):tokens)
+	Opt  nts	->     parserGen gr (nts++rule) (nt0,ts,(cat,str,l,c):tokens)
+			    ++ parserGen gr  rule       (nt0,ts,(cat,str,l,c):tokens)
 
-	Rep0 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l):tokens)
-			    ++ parserGen gr  rule                      (nt0,ts,(cat,str,l):tokens)
+	Rep0 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l,c):tokens)
+			    ++ parserGen gr  rule                      (nt0,ts,(cat,str,l,c):tokens)
 
-	Rep1 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l):tokens)
+	Rep1 nts	->     parserGen gr (nts ++ (Rep0 nts : rule)) (nt0,ts,(cat,str,l,c):tokens)
 
 
 
 
 	_		->    	--trace (show ((cat,str))) $
 					[  (t2,tokens2)	| r <- gr nt
-					   	, (t1,tokens1) <- parserGen gr r (nt,[],(cat,str,l):tokens)
+					   	, (t1,tokens1) <- parserGen gr r (nt,[],(cat,str,l,c):tokens)
 					   	, (t2,tokens2) <- parserGen gr rule (nt0,ts++[t1],tokens1)
 					   	]
 
@@ -274,13 +274,13 @@ parse gr s tokens	| ptrees /= []	= head ptrees
 toRoseTree0, toRoseTree1 :: ParseTree -> RoseTree
 
 toRoseTree0 t = case t of
-	PLeaf (c,s, l)	-> RoseNode "PLeaf" [RoseNode (show l ++ ": (" ++ show c ++ "," ++ s ++ ")") []]
+	PLeaf (c,s, l,col)	-> RoseNode "PLeaf" [RoseNode (show l ++ ": (" ++ show c ++ "," ++ s ++ ")") []]
 	PNode nt ts	-> RoseNode "PNode" (RoseNode (show nt) [] : map toRoseTree0 ts)
 
 
 -- ---
 toRoseTree1 t = case t of
-	PLeaf (c,s, l)	-> RoseNode (show c) [RoseNode (show l ++ ": " ++ s) []]
+	PLeaf (c,s, l,col)	-> RoseNode (show c) [RoseNode (show l ++ ":" ++ show col  ++ ": " ++ s) []]
 	PNode nt ts	-> RoseNode (show nt) (map toRoseTree1 ts)
 
 

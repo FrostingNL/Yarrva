@@ -109,63 +109,63 @@ comma	= Symbol ","
 
 data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM
 
-tokenizer :: State -> Int -> String -> [Token]
-tokenizer _ _ [] = []
-tokenizer s l (' ':xs) 							= tokenizer s l xs
-tokenizer s l ('\t':xs) 						= tokenizer s l xs
-tokenizer s l ('\n':xs)							= tokenizer s (l+1) xs
-tokenizer s l ('*':'*':xs) 						= tokenizer s l (rmLineComment xs)
-tokenizer s l ('>':'>':xs) 						= tokenizer s l (rmBlockComment xs)
-tokenizer s l ('b':'e':xs) 						| checkCompare xs = (getKeyword keyStr, keyStr, l) : tokenizer s l (rmComp xs True)
-												| otherwise = (equalsKey, "be", l) : tokenizer s l xs
+tokenizer :: State -> Int -> Int -> String -> [Token]
+tokenizer _ _ _ [] = []
+tokenizer s l c (' ':xs) 							= tokenizer s l (c+1) xs
+tokenizer s l c ('\t':xs) 						= tokenizer s l (c+3) xs
+tokenizer s l c ('\n':xs)							= tokenizer s (l+1) 0 xs
+tokenizer s l c ('*':'*':xs) 						= tokenizer s l (c+2) (rmLineComment xs)
+tokenizer s l c ('>':'>':xs) 						= tokenizer s l (c+2) (rmBlockComment xs)
+tokenizer s l c ('b':'e':xs) 						| checkCompare xs = (getKeyword keyStr, keyStr, l, c) : tokenizer s l (c+8) (rmComp xs True)
+												| otherwise = (equalsKey, "be", l, c) : tokenizer s l (c+2) xs
 												where 
 													keyStr = "be " ++ getCompare xs True
-tokenizer s l (',':' ':'A':'r':'r':'r':'!':xs) 	= (endmark, getEndmark, l): tokenizer START l xs
-tokenizer state l str@(x:xs) =
+tokenizer s l c (',':' ':'A':'r':'r':'r':'!':xs) 	= (endmark, getEndmark, l, c): tokenizer START l (c+7) xs
+tokenizer state l c str@(x:xs) =
 	case state of
-		ERROR 		->  error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l))
-		BOOLID		-> (Idf, getWord (str), l)   : tokenizer BOOL l (getRest str)
-		BOOL 		-> (Bool, getWord str, l)    : tokenizer BOOL l (getRest str)
-		STRID 		-> (Idf, getWord str, l)     : tokenizer STR l (getRest str)
-		ARRAY 		-> (arrayKey, "treasure", l) : tokenizer ARRAYTYPE l str
-		ARRAYID 	-> (Idf, getWord str, l) 	 : tokenizer ARRAYELEM l (getRest str)
-		IDF         -> (Idf, getWord str, l) 	 : tokenizer START l (getRest str)
+		ERROR 		->  error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l) ++ ":" ++ (show c))
+		BOOLID		-> (Idf, getWord (str), l, c)   : tokenizer BOOL l (c+ length (getWord str)) (getRest str)
+		BOOL 		-> (Bool, getWord str, l, c)    : tokenizer BOOL l (c + length (getWord str)) (getRest str)
+		STRID 		-> (Idf, getWord str, l, c)     : tokenizer STR l (c + length (getWord str)) (getRest str)
+		ARRAY 		-> (arrayKey, "treasure", l, c) : tokenizer ARRAYTYPE l c str
+		ARRAYID 	-> (Idf, getWord str, l, c) 	 : tokenizer ARRAYELEM l (c + length (getWord str)) (getRest str)
+		IDF         -> (Idf, getWord str, l, c) 	 : tokenizer START l (c + length (getWord str)) (getRest str)
 					-- START STATE
-		START 		| isKeyword $ getWord str 	 	-> tokenizer KEY l str
-				 	| isString $ getString str  	-> tokenizer STR l str
-				 	| isNumber x 					-> tokenizer NUM l str
-				 	| isGramSymbol x 				-> tokenizer SYM l str
-				 	| isArray str    				-> tokenizer ARRAY l str
-				 	| otherwise 				    -> tokenizer IDF l str
+		START 		| isKeyword $ getWord str 	 	-> tokenizer KEY l c str
+				 	| isString $ getString str  	-> tokenizer STR l c str
+				 	| isNumber x 					-> tokenizer NUM l c str
+				 	| isGramSymbol x 				-> tokenizer SYM l c str
+				 	| isArray str    				-> tokenizer ARRAY l c str
+				 	| otherwise 				    -> tokenizer IDF l c str
 					-- SYM STATE
-		SYM 		| elem x "+-*/" 				-> (Op, [x], l) : tokenizer START l xs
-			   		| otherwise 					-> (getSymbol x, [x], l) : tokenizer START l xs
+		SYM 		| elem x "+-*/" 				-> (Op, [x], l, c) : tokenizer START l (c+1) xs
+			   		| otherwise 					-> (getSymbol x, [x], l, c) : tokenizer START l (c+1) xs
 			   		-- NUM STATE
-		NUM 		| isNumber x 					-> (Nmbr, getNum str, l) : tokenizer START l (rmNum str) 
-					| otherwise 					-> tokenizer IDF l str
+		NUM 		| isNumber x 					-> (Nmbr, getNum str, l, c) : tokenizer START l (c + length (getNum str)) (rmNum str) 
+					| otherwise 					-> tokenizer IDF l c str
 					-- STR STATE
-		STR 		| isString (getString str) 		-> (String, getString str, l) : tokenizer START l (getRest str)
-					| otherwise 					-> tokenizer ERROR l str
+		STR 		| isString (getString str) 		-> (String, getString str, l, c) : tokenizer START l (c + length (getString str)) (getRest str)
+					| otherwise 					-> tokenizer ERROR l c str
 					-- KEY STATE
-		KEY 		| getKey str == intKey 			-> makeKeyToken str l : tokenizer NUM l (getRest xs)
-					| getKey str == boolKey 		-> makeKeyToken str l : tokenizer BOOLID l (getRest xs)
-					| getKey str == stringKey 		-> makeKeyToken str l : tokenizer STRID l (getRest xs)
-					| otherwise 					-> makeKeyToken str l : tokenizer START l (getRest xs)
+		KEY 		| getKey str == intKey 			-> makeKeyToken str l c : tokenizer NUM l (c + length (getWord str)) (getRest xs)
+					| getKey str == boolKey 		-> makeKeyToken str l c : tokenizer BOOLID l (c + length (getWord str)) (getRest xs)
+					| getKey str == stringKey 		-> makeKeyToken str l c : tokenizer STRID l (c + length (getWord str)) (getRest xs)
+					| otherwise 					-> makeKeyToken str l c : tokenizer START l (c + length (getWord str)) (getRest xs)
 					-- ARRAYTYPE STATE
-		ARRAYTYPE 	| getAType str == intKey 		-> (Nmbr, getArrayType str, l)   : tokenizer ARRAYID l (getRest xs)
-					| getAType str == boolKey 		-> (Bool, getArrayType str, l)   : tokenizer ARRAYID l (getRest xs)
-					| getAType str == stringKey 	-> (String, getArrayType str, l) : tokenizer ARRAYID l (getRest xs)
-					| otherwise 					-> tokenizer ERROR l str
+		ARRAYTYPE 	| getAType str == intKey 		-> (Nmbr, getArrayType str, l, c)   : tokenizer ARRAYID l (c + length (getArrayType str)) (getRest xs)
+					| getAType str == boolKey 		-> (Bool, getArrayType str, l, c)   : tokenizer ARRAYID l (c + length (getArrayType str)) (getRest xs)
+					| getAType str == stringKey 	-> (String, getArrayType str, l, c) : tokenizer ARRAYID l (c + length (getArrayType str)) (getRest xs)
+					| otherwise 					-> tokenizer ERROR l c str
 					-- ARRAYELEM STATE
-		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l) 	  : tokenizer ARRAYELEM l xs
-					| isNumber x 					-> (Nmbr, getNum str, l) 	  : tokenizer ARRAYELEM l (rmNum xs)
-					| isBoolean $ getRestW str      -> (Bool, getRestW str, l) 	  : tokenizer ARRAYELEM l (rmUpTo xs [',', ']'])
-					| otherwise 					-> (String, getString str, l) : tokenizer ARRAYELEM l (rmUpTo xs [',', ']'])
+		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c) 	  : tokenizer ARRAYELEM (c+1) l xs
+					| isNumber x 					-> (Nmbr, getNum str, l, c) 	  : tokenizer ARRAYELEM (c + length (getNum str)) l (rmNum xs)
+					| isBoolean $ getRestW str      -> (Bool, getRestW str, l, c) 	  : tokenizer ARRAYELEM l (c + length (getRestW str)) (rmUpTo xs [',', ']'])
+					| otherwise 					-> (String, getString str, l, c) : tokenizer ARRAYELEM l (c + length (getString str)) (rmUpTo xs [',', ']'])
 
 
 getAType str = getKeyword $ getArrayType str
 getKey str = getKeyword $ getWord str
-makeKeyToken str l = (getKeyword $ getWord str, getWord str, l)
+makeKeyToken str l c = (getKeyword $ getWord str, getWord str, l, c)
 getRestW str = getUpTo str [',',']'] 
 
 checkCompare :: String -> Bool
@@ -181,13 +181,13 @@ getCompare (x:xs) _ | isGramSymbol x = getCompare xs False
 rmComp :: String -> Bool -> String
 rmComp [] _ = []
 rmComp (' ':xs) True = rmComp xs True
-rmComp (' ':xs) False = xs
+rmComp (' ':xs) False = (' ':xs)
 rmComp (x:xs) _ | isGramSymbol x = (x:xs)
 				| otherwise = rmComp xs False
 
 rmLineComment :: String -> String
 rmLineComment [] = []
-rmLineComment ('\n':xs) = xs
+rmLineComment ('\n':xs) = ('\n':xs)
 rmLineComment (_:xs) = rmLineComment xs
 
 rmBlockComment :: String -> String
@@ -411,7 +411,7 @@ test3 = unlines ["fleet Fleet {",
 				"}"
 				]
 
-tokens = tokenizer START 0
+tokens = tokenizer START 0 0
 
 test0 = parse grammar Program $ tokens test
 test1 = parse grammar Program $ tokens test3
@@ -419,7 +419,7 @@ test1 = parse grammar Program $ tokens test3
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
 
-printTupList :: [(Alphabet, String, Int)] -> IO String
+printTupList :: [(Alphabet, String, Int, Int)] -> IO String
 printTupList [t] = do return (show t)
 printTupList (t:tup) = do
 						putStrLn (show t)
@@ -440,37 +440,37 @@ file f = do
 
 convert :: ParseTree -> Tree
 convert tree = case tree of
-	(PLeaf (a, s, l)) -> VarNode s l
-	(PNode _ [PLeaf (a, s, l)])																					| s == "Doubloon" 	-> VarNode "Int" l
+	(PLeaf (a, s, l, c)) -> VarNode s l
+	(PNode _ [PLeaf (a, s, l, c)])																					| s == "Doubloon" 	-> VarNode "Int" l
 																												| s == "Booty"		-> VarNode "String" l
 																												| otherwise 		-> VarNode s l
-	(PNode _ ((PLeaf (Idf, "gift", _)):x:[])) 																	-> GiftNode 	(convert x)
-	(PNode _ ((PLeaf (Idf, 	"plunder", _)):x:[])) 																-> PlunderNode 	(convert x)
-	(PNode _ ((PLeaf (Keyword "parrot", s, _)): x: []))															-> PrintNode 	(convert x)
-	(PNode _ ((PLeaf (Keyword "avast", s, _)): x: []))															-> ReturnNode s (convert x)
-	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x: x':[]))										-> BootyNode 	(convert x) (convert x')
-	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
-	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x: x':[]))											-> BoolNode 	(convert x) (convert x')
-	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Op,s, _)): x': []))																	-> OpNode s 	(convert x) (convert x')
-	(PNode _ ((PLeaf (Keyword "parley", s, _)): x: (PNode Block xs):x':x'':[]))									-> IfNode 		(convert x) (map convert xs) (convert (PNode Block [x',x'']))
-	(PNode _ ((PLeaf (Keyword "whirlpool", s, _)): x: (PNode Block xs): []))									-> WhileNode 	(convert x) (map convert xs)
-	(PNode _ ((PLeaf (Keyword "treasure", _,_)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
-	(PNode _ ((PLeaf (Keyword "navigate", s, _)): x: x': x'': (PNode Block xs): []))							-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
-	(PNode _ ((PLeaf (Keyword "ship", _, _)): (PLeaf (Idf, s, _)): (PNode FValues xs'):(PNode Block xs): [])) 	-> FuncNode s 	(map convert xs') (map convert xs)
-	(PNode _ ((PLeaf (Keyword "heave", s, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
-	(PNode Program (x:(PLeaf (a,s, _)):(PNode Block xs):[]))													-> ZupaNode s 	(map convert xs)
-	(PNode Func ((PLeaf (Idf, s, _)): xs))																		-> DoFuncNode s (map convert xs)
-	(PNode _ ((PLeaf (Keyword "flagship", s, _)): (PNode Block xs): []))										-> FuncNode s [] (map convert xs)
-	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "String" 0)
-	(PNode _ (x: (PLeaf (Keyword "be",s, _)): x': []))															-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "below",s, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "above",s, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "be below",s, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "be above",s, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ ((PLeaf (Idf, "gift", _, _)):x:[])) 																	-> GiftNode 	(convert x)
+	(PNode _ ((PLeaf (Idf, 	"plunder", _, _)):x:[])) 																-> PlunderNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "parrot", s, _, _)): x: []))															-> PrintNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "avast", s, _, _)): x: []))															-> ReturnNode s (convert x)
+	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x: x':[]))										-> BootyNode 	(convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x: x':[]))											-> BoolNode 	(convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																	-> OpNode s 	(convert x) (convert x')
+	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):x':x'':[]))									-> IfNode 		(convert x) (map convert xs) (convert (PNode Block [x',x'']))
+	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))									-> WhileNode 	(convert x) (map convert xs)
+	(PNode _ ((PLeaf (Keyword "treasure", _,_, _)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
+	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))							-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) 	-> FuncNode s 	(map convert xs') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "heave", s, _, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
+	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))													-> ZupaNode s 	(map convert xs)
+	(PNode Func ((PLeaf (Idf, s, _, _)): xs))																		-> DoFuncNode s (map convert xs)
+	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))										-> FuncNode s [] (map convert xs)
+	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "String" 0)
+	(PNode _ (x: (PLeaf (Keyword "be",s, _, _)): x': []))															-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "be below",s, _, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ ((PNode Bool [x]): []))																			-> BoolExNode $ Boolean (convert x)
 	(PNode _ [node])																							-> convert node
 
