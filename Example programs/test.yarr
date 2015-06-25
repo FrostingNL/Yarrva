@@ -1,4 +1,23 @@
 fleet Fleet {
-	navigate(doubloon a be 0. a be below 5. gift a) {
+	parley(Aye) {
+		parley(Aye) {
+			parley(Aye) {
+				doubloon a be 1, Arrr!
+			}
+			heave {
+				doubllon a be 2, Arrr!
+			}
+		}
+		heave {
+			parley(Aye) {
+				doubloon a be 3, Arrr!
+			}
+			heave {
+				doubloon a be 4, Arrr!
+			}
+		}
+	}
+	heave {
+		doubloon a be 5, Arrr!
 	}
 }

@@ -55,25 +55,40 @@ toSprockell list tree =
 								spacing ++ "Compute Add RegA RegB RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 
-		(IfNode (BoolExNode (Comp s t1 t2)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
+		(IfNode (BoolExNode (Comp s t1 t2)) xs)		-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
 														spacing ++ pNode list t2 ++ " RegA,\n" ++
 														spacing ++ pNode list t1 ++ " RegB,\n" ++
 														spacing ++ "Compute " ++ (getOp s False) ++ " RegB RegA RegA,\n" ++
 														spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
-														(concat (map (toSprockell list) xs)) ++ 
-														spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+1)) ++ ")),\n" ++ 
-														toSprockell list xs'
+														(concat (map (toSprockell list) xs)) 
 
-		(IfNode (BoolExNode (Boolean t1)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ ")\n" ++ 
+		(IfNode (BoolExNode (Boolean t1)) xs)		-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ ")\n" ++ 
 														spacing ++ pNode list t1 ++ " RegA,\n" ++
 														spacing ++ "Const 1 RegB,\n" ++
 														spacing ++ "Compute NEq RegB RegA RegA,\n" ++
 														spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
-														(concat (map (toSprockell list) xs)) ++
-														spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+1)) ++ ")),\n" ++ 
-														toSprockell list xs'
+														(concat (map (toSprockell list) xs))
 
-		(ElseNode xs)								->	spacing ++ "-- heave\n" ++ 
+		(IfElseNode (BoolExNode (Comp s t1 t2)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
+															spacing ++ pNode list t2 ++ " RegA,\n" ++
+															spacing ++ pNode list t1 ++ " RegB,\n" ++
+															spacing ++ "Compute " ++ (getOp s False) ++ " RegB RegA RegA,\n" ++
+															spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+3)) ++ ")),\n" ++
+															(concat (map (toSprockell list) xs)) ++ 
+															spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+2)) ++ ")),\n" ++ 
+															toSprockell list xs'
+
+		(IfElseNode (BoolExNode (Boolean t1)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ ")\n" ++ 
+															spacing ++ pNode list t1 ++ " RegA,\n" ++
+															spacing ++ "Const 1 RegB,\n" ++
+															spacing ++ "Compute NEq RegB RegA RegA,\n" ++
+															spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+3)) ++ ")),\n" ++
+															(concat (map (toSprockell list) xs)) ++
+															spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+1)) ++ ")),\n" ++ 
+															toSprockell list xs'
+
+		(ElseNode xs)								->	spacing ++ "Jump (Rel(" ++ (show ((calcLen xs)+1)) ++ ")),\n" ++ 
+														spacing ++ "-- heave\n" ++ 
 														(concat (map (toSprockell list) xs))
 
 		(WhileNode (BoolExNode (Comp s t1 t2)) xs)	->	spacing ++ "-- whirlpool(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
@@ -108,21 +123,22 @@ toSprockell list tree =
 		_					-> 	""
 
 calcLen :: [Tree] -> Int
-calcLen ((DoubloonNode (VarNode _ _) (VarNode _ _)):xs)	= 2 + calcLen xs
-calcLen ((DoubloonNode (VarNode _ _) xs):xs')			= 2 + calcLen [xs] + calcLen xs'
-calcLen ((BoolNode (VarNode _ _) (VarNode _ _)):xs) 	= 2 + calcLen xs
-calcLen ((OpNode _ (VarNode _ _) (VarNode _ _)):xs) 	= 4 + calcLen xs 
-calcLen ((IfNode _ xs t1):xs')							= 5 + calcLen xs + calcLen [t1] + calcLen xs'
-calcLen ((ElseNode xs): xs')							= calcLen xs + calcLen xs'
-calcLen ((GiftNode t1): xs)								= 4 + calcLen xs
-calcLen _												= 0
+calcLen ((DoubloonNode (VarNode _ _ _) (VarNode _ _ _)):xs)	= 2 + calcLen xs
+calcLen ((DoubloonNode (VarNode _ _ _) xs):xs')				= 2 + calcLen [xs] + calcLen xs'
+calcLen ((BoolNode (VarNode _ _ _) (VarNode _ _ _)):xs) 	= 2 + calcLen xs
+calcLen ((OpNode _ (VarNode _ _ _) (VarNode _ _ _)):xs) 	= 4 + calcLen xs 
+calcLen ((IfNode _ xs):xs')									= 5 + calcLen xs + calcLen xs'
+calcLen ((IfElseNode _ xs t1):xs')							= 5 + calcLen xs + calcLen [t1] + calcLen xs'
+calcLen ((ElseNode xs): xs')								= 1 + calcLen xs + calcLen xs'
+calcLen ((GiftNode t1): xs)									= 4 + calcLen xs
+calcLen _													= 0
 
 printNode :: [(String, Int)] -> Tree -> String
-printNode list t@(VarNode _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
+printNode list t@(VarNode _ _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
 printNode list t 				= toSprockell list t ++ spacing ++ "Pop "
 
 pNode :: [(String, Int)] -> Tree -> String
-pNode list t@(VarNode _ _)	= load list t
+pNode list t@(VarNode _ _ _)	= load list t
 pNode list t 				= toSprockell list t ++ spacing ++ "Pop "
 
 load :: [(String, Int)] -> Tree -> String
@@ -147,11 +163,14 @@ getOp "be above" True = "GtE"
 
 addToList :: [Tree] -> Int -> [(String, Int)]
 addToList [] _										= []
-addToList ((BootyNode (VarNode s l) t): xs)	i		= (s, (i+1)): addToList xs (i+1)
-addToList ((DoubloonNode (VarNode s l) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
-addToList ((BoolNode (VarNode s l) t): xs) i		= (s, (i+1)): addToList xs (i+1)
-addToList ((TreasureNode (VarNode s l) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
-addToList ((IfNode t1 xs t2): xs') i 				= list ++ list' ++ addToList xs' (snd (last list) + 1)
+addToList ((BootyNode (VarNode s l _) t): xs)	i		= (s, (i+1)): addToList xs (i+1)
+addToList ((DoubloonNode (VarNode s l _) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
+addToList ((BoolNode (VarNode s l _) t): xs) i		= (s, (i+1)): addToList xs (i+1)
+addToList ((TreasureNode (VarNode s l _) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
+addToList ((IfNode t1 xs): xs') i 					= list ++ addToList xs' (snd (last list) + 1)
+													where
+														list = addToList xs i
+addToList ((IfElseNode t1 xs t2): xs') i 				= list ++ list' ++ addToList xs' (snd (last list) + 1)
 													where
 														list = addToList xs i
 														list' = addToList [t2] i
@@ -172,10 +191,10 @@ addToList ((FuncNode s xs xs'): xs'') i 			= list ++ list' ++ addToList xs'' (sn
 addToList _ i 										= []
 
 getInt :: [(String, Int)] -> Tree -> Int
-getInt [] _ 						= 0
-getInt ((s,i):list) n@(VarNode nS _)| s == nS	= i
-									| otherwise = getInt list n
-getInt list _ 						= 0
+getInt [] _ 							= 0
+getInt ((s,i):list) n@(VarNode nS _ _)	| s == nS	= i
+										| otherwise = getInt list n
+getInt list _ 							= 0
 
 spacing :: String
 spacing = "       "

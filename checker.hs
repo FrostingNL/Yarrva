@@ -17,7 +17,7 @@ doUsage node a = checkUsage a node
 checkUsage :: (String, Types) -> Tree -> Bool
 checkUsage t@(s,p) tree = 
 	case tree of
-		(VarNode s2 l) 				-> s == s2
+		(VarNode s2 l c)			-> s == s2
 		(BootyNode t1 t2) 			-> usage t t2
 		(DoubloonNode t1 t2) 		-> usage t t2
 		(BoolNode t1 t2)			-> usage t t2
@@ -30,7 +30,9 @@ checkUsage t@(s,p) tree =
 		(PrintNode t1)				-> usage t t1
 		(ReturnNode _ t1)			-> usage t t1
 		(DoFuncNode _ xs)			-> uMap t xs
-		(IfNode t1 xs xs') 			| usage t t1 || uMap t xs || usage t xs'-> True
+		(IfNode t1 xs) 				| usage t t1 || uMap t xs				-> True
+									| otherwise 							-> False
+		(IfElseNode t1 xs xs') 		| usage t t1 || uMap t xs || usage t xs'-> True
 									| otherwise 							-> False
 		(ElseNode xs)				| uMap t xs								-> True
 									| otherwise 							-> False
@@ -58,7 +60,8 @@ typeChecker list tree =
 		(ElseNode xs)			-> tCheckerMap xs list
 		(ZupaNode s xs) 		-> tCheckerMap xs list 
 		(FuncNode s xs xs')		-> tCheckerMap xs list && tMap list xs
-		(IfNode t1 xs xs')		-> tCheckerMap xs list && typeChecker list xs' && checkType t1 Boo list
+		(IfNode t1 xs)			-> tCheckerMap xs list && checkType t1 Boo list
+		(IfElseNode t1 xs xs')	-> tCheckerMap xs list && typeChecker list xs' && checkType t1 Boo list
 		(WhileNode t1 xs)		-> tCheckerMap xs list && checkType t1 Boo list
 		(ForNode t1 t2 t3 xs)	-> tCheckerMap xs list && typeChecker list t1 && 
 								   typeChecker list t2 && typeChecker list t3
@@ -76,20 +79,20 @@ getOtherNodes ((TreasureNode _ _): xs)  = getOtherNodes xs
 getOtherNodes (n:xs)					= n: getOtherNodes xs
 
 addToScope :: [Tree] -> [(String, Types)]
-addToScope [] 									= []
-addToScope ((BootyNode (VarNode s l) t): xs)	| checkType t Str []	= (s, Str): addToScope xs 
-												| otherwise 			= incType t "String" l
-addToScope ((DoubloonNode (VarNode s l) t): xs)	| checkType t Int []	= (s, Int): addToScope xs 
-												| otherwise 			= incType t "Integer" l
-addToScope ((BoolNode (VarNode s l) t): xs)		| checkType t Boo []	= (s, Boo): addToScope xs 
-												| otherwise 			= incType t "Boolean" l
-addToScope ((TreasureNode (VarNode s l) t): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
-												| otherwise 			= incType t "Array" l
-addToScope ((FuncValNode (VarNode s l) (VarNode s2 l2)): xs)	
-												= (s, (getTypeFromString s2)): addToScope xs 
-addToScope (_: xs)								= addToScope xs
+addToScope [] 										= []
+addToScope ((BootyNode (VarNode s l c) t): xs)		| checkType t Str []	= (s, Str): addToScope xs 
+													| otherwise 			= incType t "String" l c 
+addToScope ((DoubloonNode (VarNode s l c) t): xs)	| checkType t Int []	= (s, Int): addToScope xs 
+													| otherwise 			= incType t "Integer" l c
+addToScope ((BoolNode (VarNode s l c) t): xs)		| checkType t Boo []	= (s, Boo): addToScope xs 
+													| otherwise 			= incType t "Boolean" l c
+addToScope ((TreasureNode (VarNode s l c) t): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
+													| otherwise 			= incType t "Array" l c
+addToScope ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs)	
+													= (s, (getTypeFromString s2)): addToScope xs 
+addToScope (_: xs)									= addToScope xs
 
-incType a s l = error ("Incorrect Type: " ++ (getValue a) ++ " is not a " ++ s ++ " ! Line:" ++ (show l))
+incType a s l c = error ("Incorrect Type: " ++ (getValue a) ++ " is not a " ++ s ++ " ! Line:" ++ (show l) ++ ":" ++ (show c))
 
 getTypeFromString :: String -> Types
 getTypeFromString s
@@ -110,53 +113,55 @@ getStringFromType s
 checkType :: Tree -> Types -> [[(String, Types)]] -> Bool
 checkType tree Int list =
 	case tree of 
-		n@(VarNode s l)  					| allT (map (isNumber) s) || getType s l list == Int 	-> True
-											| otherwise												-> wrongType n "Integer" l
+		n@(VarNode s l c)  					| allT (map (isNumber) s) || getType s l c list == Int 	-> True
+											| otherwise												-> wrongType n "Integer" l c 
 		(OpNode s t1 t2)					| checkType t1 Int list && checkType t2 Int list 		-> True
 											| otherwise												-> False
 		_									-> False
 
 checkType tree Str list =
 	case tree of
-		n@(VarNode s l) 					| isString s || getType s l list == Str					-> True
-											| otherwise												-> wrongType n "String" l
+		n@(VarNode s l c) 					| isString s || getType s l c list == Str					-> True
+											| otherwise												-> wrongType n "String" l c
 		(OpNode "+" t1 t2)					| checkType t1 Str list && checkType t2 Str list 		-> True
 											| otherwise												-> False
 		_									-> False
 
 checkType tree Boo list =
 	case tree of
-		n@(VarNode s l)	 					| s == "Aye" || s == "Nay" || getType s l list == Boo	-> True
-											| otherwise												-> wrongType n "Boolean" l
+		n@(VarNode s l c)	 				| s == "Aye" || s == "Nay" || getType s l c list == Boo	-> True
+											| otherwise												-> wrongType n "Boolean" l c
 		(BoolExNode (Comp "be" t1 t2))  	| checkType t1 t list && checkType t2 t list 			-> True
 											| otherwise												-> False
 											where
 												t = getTreeType t1 list
 		(BoolExNode (Boolean t1))			| checkType t1 Boo list									-> True
-											| otherwise												-> wrongType t1 "Boolean" (getL t1)
+											| otherwise												-> wrongType t1 "Boolean" (getL t1) (getC t1)
 		(BoolExNode (Comp _ t1 t2)) 		| checkType t1 Int list && checkType t1 Int list 		-> True
 											| otherwise												-> False
 		_									-> False
-wrongType a b c 	= error ("Incorrect Type: " ++ (getValue a) ++ " is not an " ++ b ++ "! Line: " ++ (show c))
-getL (VarNode s l) 	= l
-getL _ 				= 0
+wrongType a b c d	= error ("Incorrect Type: " ++ (getValue a) ++ " is not an " ++ b ++ "! Line: " ++ (show c) ++ ":" ++ (show d))
+getL (VarNode _ l _) = l
+getL _ 				 = 0 
+getC (VarNode _ _ c) = c
+getC _ 				 = 0 
 
-getType :: String -> Int -> [[(String, Types)]] -> Types
-getType	s l []						| isString s || allT (map (isNumber) s) || isBoolean s 	= Err
-									| otherwise												= error ("Declaration: '" ++ s ++ "' has not been defined yet! Line: " ++ (show l))
-getType s l ([]:list)				= getType s l list
-getType s l (((s2,t):tup):list) 	| s == s2 	= t
-							  		| otherwise = getType s l (tup:list)
+getType :: String -> Int -> Int -> [[(String, Types)]] -> Types
+getType	s l c []					| isString s || allT (map (isNumber) s) || isBoolean s 	= Err
+									| otherwise												= error ("Declaration: '" ++ s ++ "' has not been defined yet! Line: " ++ (show l) ++ ":" ++ (show c))
+getType s l c ([]:list)				= getType s l c list
+getType s l c (((s2,t):tup):list) 	| s == s2 	= t
+							  		| otherwise = getType s l c (tup:list)
 
 getTreeType :: Tree -> [[(String, Types)]] -> Types
-getTreeType (VarNode s l) list 		= getType s l list
-getTreeType (OpNode s t1 t2) list 	= getTreeType t1 list
-getTreeType _ list 			 		= Err
+getTreeType (VarNode s l c) list 		= getType s l c list
+getTreeType (OpNode s t1 t2) list 		= getTreeType t1 list
+getTreeType _ list 			 			= Err
 
 inScope :: [[(String, Types)]] -> Tree -> Bool
-inScope ([]:x:list) a 						= inScope (x:list) a 
-inScope (((s2,_):tup):list) n@(VarNode s l) | s == s2 || isString s || isNumber (head s) || isBoolean s	= True
-											| otherwise = inScope (tup:list) n
+inScope ([]:x:list) a 							= inScope (x:list) a 
+inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumber (head s) || isBoolean s	= True
+												| otherwise = inScope (tup:list) n
 inScope list tree =
 	case tree of
 		(BoolExNode (Boolean t1)) 	-> inScope list t1
@@ -171,7 +176,8 @@ inScope list tree =
 		(BoolExNode (Comp _ t1 t2)) -> inScope list t1 && inScope list t2
 		(FuncValNode t1 t2)			-> inScope list t1 && inScope list t2
 		n@(ForNode t1 t2 t3 xs)		-> inScope list t1 && inScope list t2 && inScope list t3 && scopeM xs list
-		n@(IfNode t1 xs xs')		-> inScope list t1 && scopeM xs list && inScope list xs'
+		n@(IfNode t1 xs)			-> inScope list t1 && scopeM xs list
+		n@(IfElseNode t1 xs xs')	-> inScope list t1 && scopeM xs list && inScope list xs'
 		n@(WhileNode t1 xs)			-> inScope list t1 && scopeM xs list 
 		n@(FuncNode s xs xs')		-> scopeM2 list xs && funcM xs xs' list
 		(DoFuncNode s xs)			-> scopeM2 list xs
@@ -186,7 +192,8 @@ scopeM2 a b = allT (map (inScope a) b)
 addAllToScope :: Tree -> [(String, Types)]
 addAllToScope tree =
 	case tree of 
-		(IfNode _ xs xs')	 -> (addToScope xs) ++ (concat (map addAllToScope xs) ++ addAllToScope xs')
+		(IfNode _ xs)		 -> (addToScope xs) ++ (concat (map addAllToScope xs))
+		(IfElseNode _ xs xs')-> (addToScope xs) ++ (concat (map addAllToScope xs) ++ addAllToScope xs')
 		(ElseNode xs)		 -> (addToScope xs) ++ (concat (map addAllToScope xs))
 		(WhileNode _ xs)	 -> (addToScope xs) ++ (concat (map addAllToScope xs))
 		(ZupaNode _ xs)		 -> (addToScope xs) ++ (concat (map addAllToScope xs))
@@ -195,7 +202,7 @@ addAllToScope tree =
 		_					 -> []
 
 getValue :: Tree -> String
-getValue (VarNode s l) 	| s == "Aye" = "1"
+getValue (VarNode s _ _) 	| s == "Aye" = "1"
 					   	| s == "Nay" = "0"
 						| otherwise	= s
 getValue (OpNode s _ _) = s
