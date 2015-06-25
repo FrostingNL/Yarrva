@@ -380,15 +380,7 @@ sampleFunction = unlines ["fleet SampleFunction {",
 
 
 test = unlines ["fleet Prog {",	
-			   "    ship a() {",
-				"   }",
-				"   doubloon int be 1, Arrr!",
-				"   booty c be \"SDSD\", Arrr!",
-				"   ship b() {",
-				"       bool a be Aye, Arrr!",
-				"       doubloon[] array be [1,2,3,4], Arrr!",
-				"   }",
-				"   parley (int be 1) { }",
+			   	"    gift a, Arrr!",
 			   "}"
 			   ]
 
@@ -403,10 +395,8 @@ test2 = unlines ["fleet Program {",
 
 
 test3 = unlines ["fleet Fleet {",
-				"    doubloon a be 1, Arrr!",
-				"    navigate(doubloon b be 0. b be below 5. gift b) {",
-				"        a be b+a, Arrr!",
-				"        parrot(\"Aye\"), Arrr!",
+				"    parley(Aye) {",
+				"        doubloon a be 1, Arrr!",
 				"    }",
 				"}"
 				]
@@ -444,8 +434,8 @@ convert tree = case tree of
 	(PNode _ [PLeaf (a, s, l, c)])																					| s == "Doubloon" 	-> VarNode "Int" l
 																												| s == "Booty"		-> VarNode "String" l
 																												| otherwise 		-> VarNode s l
-	(PNode _ ((PLeaf (Idf, "gift", _, _)):x:[])) 																	-> GiftNode 	(convert x)
-	(PNode _ ((PLeaf (Idf, 	"plunder", _, _)):x:[])) 																-> PlunderNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "gift", _, _, _)):x:[])) 																-> GiftNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "plunder", _, _, _)):x:[])) 															-> PlunderNode 	(convert x)
 	(PNode _ ((PLeaf (Keyword "parrot", s, _, _)): x: []))															-> PrintNode 	(convert x)
 	(PNode _ ((PLeaf (Keyword "avast", s, _, _)): x: []))															-> ReturnNode s (convert x)
 	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x: x':[]))										-> BootyNode 	(convert x) (convert x')
@@ -523,6 +513,6 @@ toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ArrayNode t1 t2 list)		= RoseNode "arrayDecl" ([toRTree t1, toRTree t2] ++ (map toRTree list))
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test1	
+showConvertedTree = showRoseTree $ toRTree $ convert test1
 
 --main = file "Example programs/test.yarr"

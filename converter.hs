@@ -49,41 +49,63 @@ toSprockell list tree =
 								spacing ++ "EndProg\n" ++ 
 								spacing ++ "]\n\nmain = run 1 prog >> putChar '\\n'"
 
-		(IfNode (BoolExNode (Comp s t1 t2)) xs)	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
-													spacing ++ pNode list t2 ++ " RegA,\n" ++
-													spacing ++ pNode list t1 ++ " RegB,\n" ++
-													spacing ++ "Compute " ++ (getOp s False) ++ " RegB RegA RegA,\n" ++
-													spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+1)) ++ ")),\n" ++
-													(concat (map (toSprockell list) xs))
+		(GiftNode t1)		-> 	spacing ++ "-- gift " ++ (getValue t1) ++ "\n" ++
+								spacing ++ pNode list t1 ++ " RegA,\n" ++
+								spacing ++ "Const 1 RegB,\n" ++
+								spacing ++ "Compute RegA RegB RegA,\n" ++ 
+								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 
-		(IfNode (BoolExNode (Boolean t1)) xs)	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ ")\n" ++ 
-													spacing ++ pNode list t1 ++ " RegA,\n" ++
-													spacing ++ "Const 1 RegB,\n" ++
-													spacing ++ "Compute NEq RegB RegA RegA,\n" ++
-													spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+1)) ++ ")),\n" ++
-													(concat (map (toSprockell list) xs))
+		(IfNode (BoolExNode (Comp s t1 t2)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
+														spacing ++ pNode list t2 ++ " RegA,\n" ++
+														spacing ++ pNode list t1 ++ " RegB,\n" ++
+														spacing ++ "Compute " ++ (getOp s False) ++ " RegB RegA RegA,\n" ++
+														spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
+														(concat (map (toSprockell list) xs)) ++ 
+														spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+1)) ++ ")),\n" ++ 
+														toSprockell list xs'
 
-		(WhileNode (BoolExNode (Comp s t1 t2)) xs)->spacing ++ "-- whirlpool(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
-													spacing ++ "Compute Add PC Zero RegE,\n" ++
-													spacing ++ pNode list t2 ++ " RegA,\n" ++
-													spacing ++ pNode list t1 ++ " RegB,\n" ++
-													spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegA RegA,\n" ++
-													spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
-													(concat (map (toSprockell list) xs)) ++
-													spacing ++ "Jump (Ind RegE),\n"
+		(IfNode (BoolExNode (Boolean t1)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ ")\n" ++ 
+														spacing ++ pNode list t1 ++ " RegA,\n" ++
+														spacing ++ "Const 1 RegB,\n" ++
+														spacing ++ "Compute NEq RegB RegA RegA,\n" ++
+														spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
+														(concat (map (toSprockell list) xs)) ++
+														spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+1)) ++ ")),\n" ++ 
+														toSprockell list xs'
 
-		(WhileNode (BoolExNode (Boolean t1)) xs)-> 	spacing ++ "-- whirlpool(" ++ (getValue t1) ++ ")\n" ++ 
-													spacing ++ "Compute Add PC Zero RegE,\n" ++
-													spacing ++ "Const 1 RegA,\n" ++
-													spacing ++ pNode list t1 ++ " RegB,\n" ++
-													spacing ++ "Compute NEq RegB RegA RegA,\n" ++
-													spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
-													(concat (map (toSprockell list) xs)) ++
-													spacing ++ "Jump (Ind RegE),\n"
+		(ElseNode xs)								->	spacing ++ "-- heave\n" ++ 
+														(concat (map (toSprockell list) xs))
 
-		(ForNode t0 (BoolExNode (Comp s t1 t2)) t3 xs)	-> 	spacing ++ "-- navigate("++ (getValue t0) ++ ". " ++ getValue(t2) ++ ". " ++ getValue(t3) ++ ")\n" 
+		(WhileNode (BoolExNode (Comp s t1 t2)) xs)	->	spacing ++ "-- whirlpool(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
+														spacing ++ "Compute Add PC Zero RegE,\n" ++
+														spacing ++ pNode list t2 ++ " RegA,\n" ++
+														spacing ++ pNode list t1 ++ " RegB,\n" ++
+														spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegA RegA,\n" ++
+														spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
+														(concat (map (toSprockell list) xs)) ++
+														spacing ++ "Jump (Ind RegE),\n"
+
+		(WhileNode (BoolExNode (Boolean t1)) xs)	-> 	spacing ++ "-- whirlpool(" ++ (getValue t1) ++ ")\n" ++ 
+														spacing ++ "Compute Add PC Zero RegE,\n" ++
+														spacing ++ "Const 1 RegA,\n" ++
+														spacing ++ pNode list t1 ++ " RegB,\n" ++
+														spacing ++ "Compute NEq RegB RegA RegA,\n" ++
+														spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
+														(concat (map (toSprockell list) xs)) ++
+														spacing ++ "Jump (Ind RegE),\n"
+
+		(ForNode t0 (BoolExNode (Comp s t1 t2)) t3 xs)	-> 	spacing ++ "-- navigate("++ (getValue t0) ++ ". " ++ (getValue t1) ++ " " ++ s ++ " " ++ getValue(t2) ++ ". " ++ getValue(t3) ++ ")\n" 
 
 		_					-> 	""
+
+calcLen :: [Tree] -> Int
+calcLen ((DoubloonNode (VarNode _ _) (VarNode _ _)):xs)	= 2 + calcLen xs
+calcLen ((DoubloonNode (VarNode _ _) xs):xs')			= 2 + calcLen [xs] + calcLen xs'
+calcLen ((BoolNode (VarNode _ _) (VarNode _ _)):xs) 	= 2 + calcLen xs
+calcLen ((OpNode _ (VarNode _ _) (VarNode _ _)):xs) 	= 4 + calcLen xs 
+calcLen ((IfNode _ xs t1):xs')							= 5 + calcLen xs + calcLen [t1] + calcLen xs'
+calcLen ((ElseNode xs): [])								= calcLen xs
+calcLen _												= 0
 
 printNode :: [(String, Int)] -> Tree -> String
 printNode list t@(VarNode _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
@@ -113,23 +135,16 @@ getOp "be below" True = "LtE"
 getOp "be above" False = "LtE"
 getOp "be above" True = "GtE"
 
-calcLen :: [Tree] -> Int
-calcLen ((DoubloonNode (VarNode _ _) (VarNode _ _)):xs)	= 2 + calcLen xs
-calcLen ((DoubloonNode (VarNode _ _) xs):xs')			= 2 + calcLen [xs] + calcLen xs'
-calcLen ((BoolNode (VarNode _ _) (VarNode _ _)):xs) 	= 2 + calcLen xs
-calcLen ((OpNode _ (VarNode _ _) (VarNode _ _)):xs) 	= 4 + calcLen xs 
-calcLen ((IfNode _ xs):xs')								= 4 + calcLen xs + calcLen xs'
-calcLen _												= 0
-
 addToList :: [Tree] -> Int -> [(String, Int)]
 addToList [] _										= []
 addToList ((BootyNode (VarNode s l) t): xs)	i		= (s, (i+1)): addToList xs (i+1)
 addToList ((DoubloonNode (VarNode s l) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
 addToList ((BoolNode (VarNode s l) t): xs) i		= (s, (i+1)): addToList xs (i+1)
 addToList ((TreasureNode (VarNode s l) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
-addToList ((IfNode t1 xs): xs') i 					= list ++ addToList xs' (snd (last list) + 1)
+addToList ((IfNode t1 xs t2): xs') i 				= list ++ list' ++ addToList xs' (snd (last list) + 1)
 													where
 														list = addToList xs i
+														list' = addToList [t2] i
 addToList ((ElseNode xs): xs') i 					= list ++ addToList xs' (snd (last list) + 1)
 													where
 														list = addToList xs i

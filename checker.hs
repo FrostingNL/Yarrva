@@ -30,7 +30,7 @@ checkUsage t@(s,p) tree =
 		(PrintNode t1)				-> usage t t1
 		(ReturnNode _ t1)			-> usage t t1
 		(DoFuncNode _ xs)			-> uMap t xs
-		(IfNode t1 xs) 				| usage t t1 || uMap t xs				-> True
+		(IfNode t1 xs xs') 			| usage t t1 || uMap t xs || usage t xs'-> True
 									| otherwise 							-> False
 		(ElseNode xs)				| uMap t xs								-> True
 									| otherwise 							-> False
@@ -58,7 +58,7 @@ typeChecker list tree =
 		(ElseNode xs)			-> tCheckerMap xs list
 		(ZupaNode s xs) 		-> tCheckerMap xs list 
 		(FuncNode s xs xs')		-> tCheckerMap xs list && tMap list xs
-		(IfNode t1 xs)	 		-> tCheckerMap xs list && checkType t1 Boo list
+		(IfNode t1 xs xs')		-> tCheckerMap xs list && typeChecker list xs' && checkType t1 Boo list
 		(WhileNode t1 xs)		-> tCheckerMap xs list && checkType t1 Boo list
 		(ForNode t1 t2 t3 xs)	-> tCheckerMap xs list && typeChecker list t1 && 
 								   typeChecker list t2 && typeChecker list t3
@@ -171,7 +171,7 @@ inScope list tree =
 		(BoolExNode (Comp _ t1 t2)) -> inScope list t1 && inScope list t2
 		(FuncValNode t1 t2)			-> inScope list t1 && inScope list t2
 		n@(ForNode t1 t2 t3 xs)		-> inScope list t1 && inScope list t2 && inScope list t3 && scopeM xs list
-		n@(IfNode t1 xs)  			-> inScope list t1 && scopeM xs list 
+		n@(IfNode t1 xs xs')		-> inScope list t1 && scopeM xs list && inScope list xs'
 		n@(WhileNode t1 xs)			-> inScope list t1 && scopeM xs list 
 		n@(FuncNode s xs xs')		-> scopeM2 list xs && funcM xs xs' list
 		(DoFuncNode s xs)			-> scopeM2 list xs
@@ -186,7 +186,7 @@ scopeM2 a b = allT (map (inScope a) b)
 addAllToScope :: Tree -> [(String, Types)]
 addAllToScope tree =
 	case tree of 
-		(IfNode _ xs)		 -> (addToScope xs) ++ (concat (map addAllToScope xs))
+		(IfNode _ xs xs')	 -> (addToScope xs) ++ (concat (map addAllToScope xs) ++ addAllToScope xs')
 		(ElseNode xs)		 -> (addToScope xs) ++ (concat (map addAllToScope xs))
 		(WhileNode _ xs)	 -> (addToScope xs) ++ (concat (map addAllToScope xs))
 		(ZupaNode _ xs)		 -> (addToScope xs) ++ (concat (map addAllToScope xs))
@@ -200,6 +200,8 @@ getValue (VarNode s l) 	| s == "Aye" = "1"
 						| otherwise	= s
 getValue (OpNode s _ _) = s
 getValue (FuncNode s _ _) = s
+getValue (DoubloonNode t1 t2) = "doubloon " ++ getValue t1 ++ " be " ++ getValue t2
+getValue (GiftNode t1) = "gift " ++ getValue t1
 
 allT = all (==True)
 anyT = any (==True)
