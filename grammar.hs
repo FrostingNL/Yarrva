@@ -29,10 +29,9 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
 	Expr 	-> [[Opt [lpar], Expr2, Opt [rpar]]]
-	Expr2 	-> [[Type, SyntCat Op, Type],																		-- An expression
+	Expr2 	-> [[Type, Opt [SyntCat Op, Type]],																		-- An expression
 				[incKey, Type],																					-- Increase Type by 1
-				[decKey, Type],																					-- Decrease Type by 1
-				[Type]]																							-- One of the types
+				[decKey, Type]]																				-- One of the types
 	Op		-> [[plus],																							-- Self Explanatory
 				[minus],																						-- Self Explanatory
 				[times],																						-- Self Explanatory
@@ -111,12 +110,12 @@ data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID
 
 tokenizer :: State -> Int -> Int -> String -> [Token]
 tokenizer _ _ _ [] = []
-tokenizer s l c (' ':xs) 							= tokenizer s l (c+1) xs
+tokenizer s l c (' ':xs) 						= tokenizer s l (c+1) xs
 tokenizer s l c ('\t':xs) 						= tokenizer s l (c+3) xs
-tokenizer s l c ('\n':xs)							= tokenizer s (l+1) 0 xs
-tokenizer s l c ('*':'*':xs) 						= tokenizer s l (c+2) (rmLineComment xs)
-tokenizer s l c ('>':'>':xs) 						= tokenizer s l (c+2) (rmBlockComment xs)
-tokenizer s l c ('b':'e':xs) 						| checkCompare xs = (getKeyword keyStr, keyStr, l, c) : tokenizer s l (c+8) (rmComp xs True)
+tokenizer s l c ('\n':xs)						= tokenizer s (l+1) 0 xs
+tokenizer s l c ('*':'*':xs) 					= tokenizer s l (c+2) (rmLineComment xs)
+tokenizer s l c ('>':'>':xs) 					= tokenizer s l (c+2) (rmBlockComment xs)
+tokenizer s l c ('b':'e':xs) 					| checkCompare xs = (getKeyword keyStr, keyStr, l, c) : tokenizer s l (c+8) (rmComp xs True)
 												| otherwise = (equalsKey, "be", l, c) : tokenizer s l (c+2) xs
 												where 
 													keyStr = "be " ++ getCompare xs True
@@ -162,7 +161,6 @@ tokenizer state l c str@(x:xs) =
 					| isBoolean $ getRestW str      -> (Bool, getRestW str, l, c) 	  : tokenizer ARRAYELEM l (c + length (getRestW str)) (rmUpTo xs [',', ']'])
 					| otherwise 					-> (String, getString str, l, c) : tokenizer ARRAYELEM l (c + length (getString str)) (rmUpTo xs [',', ']'])
 
-
 getAType str = getKeyword $ getArrayType str
 getKey str = getKeyword $ getWord str
 makeKeyToken str l c = (getKeyword $ getWord str, getWord str, l, c)
@@ -197,7 +195,7 @@ rmBlockComment (_:xs) = rmBlockComment xs
 
 rmNum :: String -> String
 rmNum [] = []
-rmNum (x:xs) | elem x "1234567890" = rmNum xs
+rmNum (x:xs) | isNumber x = rmNum xs
 			 | otherwise = (x:xs)
 
 isArray :: String -> Bool
@@ -284,12 +282,13 @@ getUpTo (s:str) chars | elem s chars = []
 rmUpTo :: String -> [Char] -> String
 rmUpTo [] _ = []
 rmUpTo (s:str) chars | elem s chars = (s:str)
-					  | otherwise = rmUpTo str chars
+					 | otherwise = rmUpTo str chars
+
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
 	| elem x ",+-*/()." = (x:xs)
-	| x == ' ' = xs
+	| x == ' ' = (x:xs)
 	| otherwise = getRest xs
 
 getEndmark :: String
@@ -396,7 +395,12 @@ test2 = unlines ["fleet Program {",
 
 test3 = unlines ["fleet Fleet {",
 				"    parley(Aye) {",
-				"        doubloon a be 1, Arrr!",
+				"        parley(Aye) {",
+				"             doubloon a be 1, Arrr!",
+				"        }",
+				"    }",
+				"    heave {",
+				"         doubloon a be 3, Arrr!",
 				"    }",
 				"}"
 				]
@@ -429,11 +433,11 @@ file f = do
 	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
 convert :: ParseTree -> Tree
-convert tree = case tree of
-	(PLeaf (a, s, l, c)) -> VarNode s l
-	(PNode _ [PLeaf (a, s, l, c)])																					| s == "Doubloon" 	-> VarNode "Int" l
-																												| s == "Booty"		-> VarNode "String" l
-																												| otherwise 		-> VarNode s l
+convert tree = case tree of 
+	(PLeaf (a, s, l, c)) -> VarNode s l c
+	(PNode _ [PLeaf (a, s, l, c)])																					| s == "Doubloon" 	-> VarNode "Int" l c
+																													| s == "Booty"		-> VarNode "String" l c
+																													| otherwise 		-> VarNode s l c
 	(PNode _ ((PLeaf (Keyword "gift", _, _, _)):x:[])) 																-> GiftNode 	(convert x)
 	(PNode _ ((PLeaf (Keyword "plunder", _, _, _)):x:[])) 															-> PlunderNode 	(convert x)
 	(PNode _ ((PLeaf (Keyword "parrot", s, _, _)): x: []))															-> PrintNode 	(convert x)
@@ -442,29 +446,30 @@ convert tree = case tree of
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x: x':[]))											-> BoolNode 	(convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																	-> OpNode s 	(convert x) (convert x')
-	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):x':x'':[]))									-> IfNode 		(convert x) (map convert xs) (convert (PNode Block [x',x'']))
-	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))									-> WhileNode 	(convert x) (map convert xs)
+	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																		-> OpNode s 	(convert x) (convert x')
+	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):[]))											-> IfNode 		(convert x) (map convert xs)
+	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):x':x'':[]))									-> IfElseNode   (convert x) (map convert xs) (convert (PNode Block [x',x'']))
+	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))										-> WhileNode 	(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "treasure", _,_, _)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
-	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))							-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
-	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) 	-> FuncNode s 	(map convert xs') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))								-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) -> FuncNode s 	(map convert xs') (map convert xs)
 	(PNode _ ((PLeaf (Keyword "heave", s, _, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
-	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))													-> ZupaNode s 	(map convert xs)
+	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))														-> ZupaNode s 	(map convert xs)
 	(PNode Func ((PLeaf (Idf, s, _, _)): xs))																		-> DoFuncNode s (map convert xs)
-	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))										-> FuncNode s [] (map convert xs)
-	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "String" 0)
+	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))											-> FuncNode s [] (map convert xs)
+	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "String" 0 0)
 	(PNode _ (x: (PLeaf (Keyword "be",s, _, _)): x': []))															-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "be below",s, _, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ ((PNode Bool [x]): []))																			-> BoolExNode $ Boolean (convert x)
-	(PNode _ [node])																							-> convert node
+	(PNode _ (x: (PLeaf (Keyword "be below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ ((PNode Bool [x]): []))																				-> BoolExNode $ Boolean (convert x)
+	(PNode _ [node])																								-> convert node
 
-data Tree = VarNode 	String Int
+data Tree = VarNode 	String Int Int
 		  | BootyNode 	Tree Tree
 		  | DoubloonNode Tree Tree
 		  | BoolNode 	Tree Tree
@@ -473,7 +478,8 @@ data Tree = VarNode 	String Int
 		  | BoolExNode 	BoolEx
 		  | GiftNode	Tree
 		  | PlunderNode Tree
-		  | IfNode		Tree [Tree] Tree
+		  | IfNode		Tree [Tree]
+		  | IfElseNode 	Tree [Tree] Tree
 		  | ElseNode	[Tree]
 		  | ForNode		Tree Tree Tree [Tree]
 		  | WhileNode	Tree [Tree]
@@ -491,7 +497,7 @@ data BoolEx = Comp String Tree Tree
 			deriving (Eq, Show)
 
 toRTree :: Tree -> RoseTree
-toRTree (VarNode s l) 				= RoseNode ((show l) ++ ": " ++ s) []
+toRTree (VarNode s l c) 			= RoseNode ((show l) ++ ":" ++ (show c) ++ ":" ++ s) []
 toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
 toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
 toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]
@@ -501,7 +507,8 @@ toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Boolean t1)) 	= RoseNode "boolean" [toRTree t1]
 toRTree (GiftNode t1)				= RoseNode "inc" [toRTree t1]
 toRTree (PlunderNode t1)			= RoseNode "dec" [toRTree t1]
-toRTree (IfNode t1 list l)			= RoseNode "if" (map toRTree (t1 : list ++ [l]))
+toRTree (IfNode t1 list)			= RoseNode "if"	 (map toRTree (t1:list))
+toRTree (IfElseNode t1 list l)		= RoseNode "ifelse" (map toRTree (t1 : list ++ [l]))
 toRTree (ElseNode list)				= RoseNode "else" (map toRTree (list))
 toRTree (ForNode t1 t2 t3 list)		= RoseNode "for" (map toRTree (t1:t2:t3:list))
 toRTree (WhileNode t1 list)			= RoseNode "while" (map toRTree (t1:list))
