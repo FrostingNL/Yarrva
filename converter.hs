@@ -52,7 +52,7 @@ toSprockell list tree =
 		(GiftNode t1)		-> 	spacing ++ "-- gift " ++ (getValue t1) ++ "\n" ++
 								spacing ++ pNode list t1 ++ " RegA,\n" ++
 								spacing ++ "Const 1 RegB,\n" ++
-								spacing ++ "Compute RegA RegB RegA,\n" ++ 
+								spacing ++ "Compute Add RegA RegB RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 
 		(IfNode (BoolExNode (Comp s t1 t2)) xs xs')	-> 	spacing ++ "-- parley(" ++ (getValue t1) ++ " be " ++ getValue(t2) ++ ")\n" ++ 
@@ -94,7 +94,16 @@ toSprockell list tree =
 														(concat (map (toSprockell list) xs)) ++
 														spacing ++ "Jump (Ind RegE),\n"
 
-		(ForNode t0 (BoolExNode (Comp s t1 t2)) t3 xs)	-> 	spacing ++ "-- navigate("++ (getValue t0) ++ ". " ++ (getValue t1) ++ " " ++ s ++ " " ++ getValue(t2) ++ ". " ++ getValue(t3) ++ ")\n" 
+		(ForNode t0 (BoolExNode (Comp s t1 t2)) t3 xs)	-> 	spacing ++ "-- navigate("++ (getValue t0) ++ ". " ++ (getValue t1) ++ " " ++ s ++ " " ++ getValue(t2) ++ ". " ++ getValue(t3) ++ ")\n" ++
+															toSprockell list t0 ++
+															spacing ++ "Compute Add PC Zero RegE,\n" ++
+															spacing ++ pNode list t2 ++ " RegA,\n" ++
+															spacing ++ pNode list t1 ++ " RegB,\n" ++
+															spacing ++ "Compute " ++ (getOp s False) ++ " RegB RegA RegA,\n" ++
+															spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+(calcLen [t3])+2)) ++ ")),\n" ++
+															(concat (map (toSprockell list) xs)) ++ 
+															toSprockell list t3 ++
+															spacing ++ "Jump (Ind RegE),\n"
 
 		_					-> 	""
 
@@ -104,7 +113,8 @@ calcLen ((DoubloonNode (VarNode _ _) xs):xs')			= 2 + calcLen [xs] + calcLen xs'
 calcLen ((BoolNode (VarNode _ _) (VarNode _ _)):xs) 	= 2 + calcLen xs
 calcLen ((OpNode _ (VarNode _ _) (VarNode _ _)):xs) 	= 4 + calcLen xs 
 calcLen ((IfNode _ xs t1):xs')							= 5 + calcLen xs + calcLen [t1] + calcLen xs'
-calcLen ((ElseNode xs): [])								= calcLen xs
+calcLen ((ElseNode xs): xs')							= calcLen xs + calcLen xs'
+calcLen ((GiftNode t1): xs)								= 4 + calcLen xs
 calcLen _												= 0
 
 printNode :: [(String, Int)] -> Tree -> String
