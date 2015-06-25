@@ -379,15 +379,7 @@ sampleFunction = unlines ["fleet SampleFunction {",
 
 
 test = unlines ["fleet Prog {",	
-			   "    ship a() {",
-				"   }",
-				"   doubloon int be 1, Arrr!",
-				"   booty c be \"SDSD\", Arrr!",
-				"   ship b() {",
-				"       bool a be Aye, Arrr!",
-				"       doubloon[] array be [1,2,3,4], Arrr!",
-				"   }",
-				"   parley (int be 1) { }",
+			   	"    gift a, Arrr!",
 			   "}"
 			   ]
 
@@ -441,13 +433,13 @@ file f = do
 	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
 
 convert :: ParseTree -> Tree
-convert tree = case tree of
+convert tree = case tree of 
 	(PLeaf (a, s, l, c)) -> VarNode s l c
 	(PNode _ [PLeaf (a, s, l, c)])																					| s == "Doubloon" 	-> VarNode "Int" l c
 																													| s == "Booty"		-> VarNode "String" l c
 																													| otherwise 		-> VarNode s l c
-	(PNode _ ((PLeaf (Idf, "gift", _, _)):x:[])) 																	-> GiftNode 	(convert x)
-	(PNode _ ((PLeaf (Idf, 	"plunder", _, _)):x:[])) 																-> PlunderNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "gift", _, _, _)):x:[])) 																-> GiftNode 	(convert x)
+	(PNode _ ((PLeaf (Keyword "plunder", _, _, _)):x:[])) 															-> PlunderNode 	(convert x)
 	(PNode _ ((PLeaf (Keyword "parrot", s, _, _)): x: []))															-> PrintNode 	(convert x)
 	(PNode _ ((PLeaf (Keyword "avast", s, _, _)): x: []))															-> ReturnNode s (convert x)
 	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x: x':[]))										-> BootyNode 	(convert x) (convert x')
@@ -457,14 +449,14 @@ convert tree = case tree of
 	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																		-> OpNode s 	(convert x) (convert x')
 	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):[]))											-> IfNode 		(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):x':x'':[]))									-> IfElseNode   (convert x) (map convert xs) (convert (PNode Block [x',x'']))
-	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))									-> WhileNode 	(convert x) (map convert xs)
+	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))										-> WhileNode 	(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "treasure", _,_, _)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
-	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))							-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
-	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) 	-> FuncNode s 	(map convert xs') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))								-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
+	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) -> FuncNode s 	(map convert xs') (map convert xs)
 	(PNode _ ((PLeaf (Keyword "heave", s, _, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
-	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))													-> ZupaNode s 	(map convert xs)
+	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))														-> ZupaNode s 	(map convert xs)
 	(PNode Func ((PLeaf (Idf, s, _, _)): xs))																		-> DoFuncNode s (map convert xs)
-	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))										-> FuncNode s [] (map convert xs)
+	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))											-> FuncNode s [] (map convert xs)
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0 0)
 	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0 0)
 	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0 0)
@@ -472,10 +464,10 @@ convert tree = case tree of
 	(PNode _ (x: (PLeaf (Keyword "be",s, _, _)): x': []))															-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "be below",s, _, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))													-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ ((PNode Bool [x]): []))																			-> BoolExNode $ Boolean (convert x)
-	(PNode _ [node])																							-> convert node
+	(PNode _ (x: (PLeaf (Keyword "be below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
+	(PNode _ ((PNode Bool [x]): []))																				-> BoolExNode $ Boolean (convert x)
+	(PNode _ [node])																								-> convert node
 
 data Tree = VarNode 	String Int Int
 		  | BootyNode 	Tree Tree
@@ -505,7 +497,7 @@ data BoolEx = Comp String Tree Tree
 			deriving (Eq, Show)
 
 toRTree :: Tree -> RoseTree
-toRTree (VarNode s l c) 				= RoseNode ((show l) ++ ":" ++ (show c) ++ ":" ++ s) []
+toRTree (VarNode s l c) 			= RoseNode ((show l) ++ ":" ++ (show c) ++ ":" ++ s) []
 toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
 toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
 toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]
@@ -528,6 +520,6 @@ toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ArrayNode t1 t2 list)		= RoseNode "arrayDecl" ([toRTree t1, toRTree t2] ++ (map toRTree list))
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
-showConvertedTree = showRoseTree $ toRTree $ convert test1	
+showConvertedTree = showRoseTree $ toRTree $ convert test1
 
 --main = file "Example programs/test.yarr"

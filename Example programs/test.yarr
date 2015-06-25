@@ -1,4 +1,4 @@
 fleet Fleet {
-	doubloon a be 5, Arrr!
-	a be 6, Arrr!
+	navigate(doubloon a be 0. a be below 5. gift a) {
+	}
 }
