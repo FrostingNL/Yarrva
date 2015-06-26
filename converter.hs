@@ -107,11 +107,15 @@ toSprockell list tree =
 												spacing ++ "Jump RegE,\n"
 
 		(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
-												spacing ++ "Const 2 RegA"
+												spacing ++ "Const 2 RegA,\n" ++ 
 												spacing ++ "Compute Add PC RegA RegE,\n" ++
 												spacing ++ "Push RegE,\n" ++
-												spacing ++ pushFunc xs
+												spacing ++ pushFunc list xs
 		_					-> 	""
+
+funcText :: [Tree] -> String
+funcText [x]    = (getValue x)
+funcText (x:xs) = (getValue x) ++ ", " ++funcText xs
 
 pushFunc :: [(String, Int)] -> [Tree] -> String
 pushFunc list []  	 =  "" 

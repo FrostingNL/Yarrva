@@ -1,6 +1,5 @@
 fleet Fleet {
 	ship a(doubloon b) {
-	
 	}
 
 	a(Aye), Arrr!
