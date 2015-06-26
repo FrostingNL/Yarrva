@@ -1,26 +1,5 @@
 fleet Fleet {
-<<<<<<< HEAD
-	parley(Aye) {
-		parley(Aye) {
-			parley(Aye) {
-				doubloon a be 1, Arrr!
-			}
-			heave {
-				doubloon a be 2, Arrr!
-			}
-		}
-		heave {
-			parley(Aye) {
-				doubloon a be 3, Arrr!
-			}
-			heave {
-				doubloon a be 4, Arrr!
-			}
-		}
+	ship a (doubloon b) {
 	}
-	heave {
-		doubloon a be 5, Arrr!
-	}
-
 	a(Aye), Arrr!
 }
