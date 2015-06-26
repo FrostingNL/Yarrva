@@ -101,6 +101,7 @@ toSprockell list tree =
 
 		(FuncNode s xs xs')					->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+3)) ++ ")),\n" ++
+												spacing ++ "Compute Add PC Zero RegE,\n" ++ 
 												(concat (map (toSprockell list) xs')) ++
 												spacing ++ "Pop RegE,\n" ++
 												spacing ++ "Push RegA,\n" ++	
