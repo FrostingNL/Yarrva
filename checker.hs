@@ -21,6 +21,7 @@ checkUsage t@(s,p) tree =
 		(BootyNode t1 t2) 			-> usage t t2
 		(DoubloonNode t1 t2) 		-> usage t t2
 		(BoolNode t1 t2)			-> usage t t2
+		(AssignNode t1 t2) 			-> usage t t1 || usage t t2
 		(OpNode _ t1 t2)			-> usage t t1 || usage t t2
 		(BoolExNode (Comp _ t1 t2))	-> usage t t1 || usage t t2
 		(BoolExNode (Boolean t1))	-> usage t t1
@@ -57,6 +58,7 @@ typeChecker list tree =
 		n@(BoolExNode t1)		-> checkType n  Boo list
 		(GiftNode t1)			-> checkType t1 Int list
 		(PlunderNode t1)		-> checkType t1 Int list
+		(AssignNode t1 t2) 		-> checkAssignType t1 t2 list
 		(ElseNode xs)			-> tCheckerMap xs list
 		(ZupaNode s xs) 		-> tCheckerMap xs list 
 		(FuncNode s xs xs')		-> tCheckerMap xs list && tMap list xs
@@ -93,6 +95,9 @@ addToScope ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs)
 addToScope (_: xs)									= addToScope xs
 
 incType a s l c = error ("Incorrect Type: " ++ (getValue a) ++ " is not a " ++ s ++ " ! Line:" ++ (show l) ++ ":" ++ (show c))
+
+checkAssignType :: Tree -> Tree -> [[(String, Types)]] -> Bool
+checkAssignType idf val list = checkType val (getTreeType idf list) list
 
 getTypeFromString :: String -> Types
 getTypeFromString s
@@ -172,6 +177,7 @@ inScope list tree =
 		(BootyNode t1 t2)			-> inScope list t1 && inScope list t2
 		(DoubloonNode t1 t2) 		-> inScope list t1 && inScope list t2
 		(BoolNode t1 t2) 			-> inScope list t1 && inScope list t2
+		(AssignNode t1 t2)			-> inScope list t1 && inScope list t2
 		(OpNode _ t1 t2) 			-> inScope list t1 && inScope list t2
 		(BoolExNode (Comp _ t1 t2)) -> inScope list t1 && inScope list t2
 		(FuncValNode t1 t2)			-> inScope list t1 && inScope list t2

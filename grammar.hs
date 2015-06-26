@@ -452,6 +452,8 @@ test3 = unlines ["fleet Fleet {",
 				"    heave {",
 				"         doubloon a be 3, Arrr!",
 				"    }",
+				"    doubloon a be 0, Arrr!",
+				"    a be 1, Arrr!",
 				"}"
 				]
 
@@ -496,6 +498,7 @@ convert tree = case tree of
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "order", "order", _, _)]): x: x':[]))										-> BoolNode 	(convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
+	(PNode _ (PLeaf (Idf, s, l, c): x: []))																-> AssignNode 	(VarNode s l c) (convert x)
 	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																		-> OpNode s 	(convert x) (convert x')
 	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):[]))											-> IfNode 		(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):x':x'':[]))									-> IfElseNode   (convert x) (map convert xs) (convert (PNode Block [x',x'']))
@@ -525,6 +528,7 @@ data Tree = VarNode 	String Int Int
 		  | DoubloonNode Tree Tree
 		  | BoolNode 	Tree Tree
 		  | TreasureNode Tree Tree
+		  | AssignNode	Tree Tree
 		  | OpNode 		String Tree Tree
 		  | BoolExNode 	BoolEx
 		  | GiftNode	Tree
@@ -555,6 +559,7 @@ toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
 toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
 toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]
 toRTree (TreasureNode t1 t2)		= RoseNode "arrayDecl" [toRTree t1, toRTree t2]
+toRTree (AssignNode s t1)			= RoseNode "assign" [toRTree s, toRTree t1] 
 toRTree (OpNode s t1 t2)			= RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Comp s t1 t2)) = RoseNode s [toRTree t1, toRTree t2]
 toRTree (BoolExNode (Boolean t1)) 	= RoseNode "boolean" [toRTree t1]

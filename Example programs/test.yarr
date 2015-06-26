@@ -1,4 +1,5 @@
 fleet Fleet {
+<<<<<<< HEAD
 	parley(Aye) {
 		parley(Aye) {
 			parley(Aye) {
@@ -20,4 +21,6 @@ fleet Fleet {
 	heave {
 		doubloon a be 5, Arrr!
 	}
+
+	a(Aye), Arrr!
 }
