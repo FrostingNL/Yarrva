@@ -1,4 +1,5 @@
 fleet Fleet {
+<<<<<<< HEAD
 	ship a(doubloon b) {
 	}
 

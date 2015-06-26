@@ -168,10 +168,11 @@ tokenizer state l c str@(x:xs) =
 						newC = c + length (getString str)
 						rest = getRest str
 					-- KEY STATE
-		KEY 		| keyword == intKey 			-> newToken : tokenizer NUM l newC rest
-					| keyword == boolKey 			-> newToken : tokenizer BOOLID l newC rest
-					| keyword == stringKey 			-> newToken : tokenizer STRID l newC rest
-					| otherwise 					-> newToken : tokenizer START l newC rest
+		KEY 		| keyword == intKey 						-> newToken 	      : tokenizer NUM l newC rest
+					| keyword == boolKey                     	-> newToken 		  : tokenizer BOOLID l newC rest
+					| keyword == stringKey 						-> newToken 		  : tokenizer STRID l newC rest
+					| keyword == trueKey || keyword == falseKey -> (Bool, word, l, c) : tokenizer START l newC rest
+					| otherwise 								-> newToken 		  : tokenizer START l newC rest
 					where 
 						word = getWord str
 						newC = c + length word
@@ -442,12 +443,22 @@ test2 = unlines ["fleet Program {",
 
 
 
+<<<<<<< HEAD
 test3 = unlines ["fleet Program {",
 				"   ship a(doubloon b) {",
 				"   }",
 				"   a(1), Arrr!",
 				"}"
 				]
+=======
+test3 = unlines ["fleet Fleet {",
+	"order b be Aye, Arrr!",
+	"ship a (doubloon b) {",
+	"}",
+	"a(Aye), Arrr!",
+	"}"]
+				
+>>>>>>> a186ed6d0d9f76946e63a3fa85426e9475abbb7f
 
 tokens = tokenizer START 0 0
 
@@ -500,7 +511,7 @@ convert tree = case tree of
 	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) -> FuncNode s 	(map convert xs') (map convert xs)
 	(PNode _ ((PLeaf (Keyword "heave", s, _, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
 	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))														-> ZupaNode s 	(map convert xs)
-	(PNode Func ((PLeaf (Idf, s, _, _)): xs))																		-> DoFuncNode s (map convert xs)
+	(PNode _ ((PNode Func ((PLeaf (Idf, s, _, _)): xs)):_))															-> DoFuncNode s (map convert xs)
 	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))											-> FuncNode s [] (map convert xs)
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0 0)
 	(PNode _ ((PNode _ [PLeaf (Keyword "order", "order", _, _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "Bool" 0 0)
