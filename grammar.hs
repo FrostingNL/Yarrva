@@ -44,7 +44,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[SyntCat String],																				-- A string
 				[Func]]
 	ArrayOp	-> [[idf, lbra, ArrayIndex, rbra]]
-	ArrayIndex -> [[Alt [SyntCat Nmbr] [idf]]]
+	ArrayIndex->[[Alt [SyntCat Nmbr] [idf]]]
 	Bool  	-> [[Alt [trueKey] [falseKey]]]
 	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
@@ -424,7 +424,12 @@ sampleFunction = unlines ["fleet SampleFunction {",
 						 "   ",
 						 "   flagship() {",
 						 "      doubloon a be add3(5), Arrr!",
-						 "      parrot a, Arrr!",
+					--	 "      parrot a, Arrr!",
+					--	 "   }",
+					--	 "   navigate(doubloon a be 0. a be below 5. gift a) {",
+					--	 "       parley(a be 1 or a be 3) {",
+					--	 "            parrot (a), Arrr!",
+					--	 "       }",
 						 "   }",
 						 "}"
 						]
@@ -437,7 +442,7 @@ test = unlines ["fleet Prog {",
 
 test2 = unlines ["fleet Program {",	
 		"doubloon[] a be [1,3,5], Arrr!",
-		--"doubloon c be a[1], Arrr!",
+		"doubloon c be a[1], Arrr!",
 		"}"
 		]
 
@@ -454,7 +459,7 @@ test3 = unlines ["fleet Fleet {",
 tokens = tokenizer START 0 0
 
 test0 = parse grammar Program $ tokens test
-test1 = parse grammar Program $ tokens test3
+test1 = parse grammar Program $ tokens test2
 
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
@@ -492,7 +497,7 @@ convert tree = case tree of
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "order", "order", _, _)]): x: x':[]))										-> BoolNode 	(convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
-	(PNode _ (PLeaf (Idf, s, l, c): x: []))																-> AssignNode 	(VarNode s l c) (convert x)
+	(PNode _ (PLeaf (Idf, s, l, c): x: []))																			-> AssignNode 	(VarNode s l c) (convert x)
 	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																		-> OpNode s 	(convert x) (convert x')
 	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):[]))											-> IfNode 		(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "parley", s, _, _)): x: (PNode Block xs):x':x'':[]))									-> IfElseNode   (convert x) (map convert xs) (convert (PNode Block [x',x'']))
