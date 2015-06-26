@@ -150,6 +150,7 @@ calcLen ((ForNode t1 t2 t3 xs): xs')						= 10 + calcLen [t1] + calcLen [t2] + c
 calcLen ((ElseNode xs): xs')								= 1 + calcLen xs + calcLen xs'
 calcLen ((GiftNode t1): xs)									= 4 + calcLen xs
 calcLen ((PrintNode t1): xs)								= 6 + calcLen xs
+calcLen ((FuncNode s t1 t2): xs)							= 7 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((FuncValNode t1 t2): xs) 							= 2 + calcLen xs
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
 calcLen _													= 0
