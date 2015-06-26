@@ -45,6 +45,8 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| FValues
 		| Var
 		| Array
+		| ArrayOp
+		| ArrayIndex
 
 		deriving (Eq,Show)
 
@@ -121,38 +123,38 @@ parserGen _  _  ( _ , _,  []  ) = []
 parserGen gr (nt:rule) (nt0,ts,(cat,str, l,c):tokens)
  | doPrint = case nt of
 	Symbol str'	->  (if (str==str')
-				then traceShow ("success: " ++ str)
+				then traceShow ("(" ++ show l ++ ":" ++ show c ++ ")" ++ " success: " ++ str)
                                      (parserGen gr rule (nt0,ts,tokens))
-				else traceShow (" expected: " ++ str' ++ " -- found: " ++ str)
+				else traceShow ("    (" ++ show l ++ ":" ++ show c ++ ")" ++ " expected: " ++ str' ++ " -- found: " ++ str)
 				     []
 				)
 
 	Keyword str'	->  (if (str==str')
-				then traceShow ("success: " ++ str)
+				then traceShow ("(" ++ show l ++ ":" ++ show c ++ ")" ++ " success: " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
-				else traceShow ("expected: " ++ str' ++ " -- found: " ++ str)
+				else traceShow ("    (" ++ show l ++ ":" ++ show c ++ ")" ++ " expected: " ++ str' ++ " -- found: " ++ str)
 				     []
 				)
 
 	SyntCat cat'	->  (if (cat==cat')
-				then traceShow ("success: " ++ show cat ++ " " ++ str)
+				then traceShow ("(" ++ show l ++ ":" ++ show c ++ ")" ++ " success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
-				else traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
+				else traceShow ("    (" ++ show l ++ ":" ++ show c ++ ")" ++ " expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
 
 
 	NoCat cat'	->  (if (cat==cat')
-				then traceShow ("success: " ++ show cat ++ " " ++ str)
+				then traceShow ("(" ++ show l ++ ":" ++ show c ++ ")" ++ " success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts, tokens))
-				else traceShow ("expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
+				else traceShow ("    (" ++ show l ++ ":" ++ show c ++ ")" ++ " expected: " ++ show cat' ++ " -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
 
 	CheckToken p	->  (if (p (cat,str,l,c))
-				then traceShow ("success: " ++ show cat ++ " " ++ str)
+				then traceShow ("(" ++ show l ++ ":" ++ show c ++ ")" ++ " success: " ++ show cat ++ " " ++ str)
 				     (parserGen gr rule (nt0, ts++[PLeaf (cat,str, l,c)], tokens))
-				else traceShow ("expected: some property (...) -- found: " ++ show cat ++ " " ++ str)
+				else traceShow ("    (" ++ show l ++ ":" ++ show c ++ ")" ++ " expected: some property (...) -- found: " ++ show cat ++ " " ++ str)
 				     []
 				)
 
@@ -257,7 +259,7 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l,c):tokens)
 parse :: Grammar -> Alphabet -> [Token] -> ParseTree
 
 parse gr s tokens	| ptrees /= []	= head ptrees
-			| otherwise	= error "parse: parse error - somewhere :-) - add your own traceShows in parseGen"
+			        | otherwise	= error "PARSING ERROR: parse error - somewhere :-) - add your own traceShows in parseGen"
 	where
 	  ptrees = [ t  | r <- gr s
 			, (t,rem) <- parserGen gr r (s,[],tokens)

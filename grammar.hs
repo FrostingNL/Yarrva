@@ -28,8 +28,9 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
-	Expr 	-> [[Opt [lpar], Expr2, Opt [rpar]]]
-	Expr2 	-> [[Type, Opt [SyntCat Op, Type]],																		-- An expression
+	Expr 	-> [[Alt [Expr2] [lpar, Expr2, rpar]]]
+	Expr2 	-> [[ArrayOp],	
+				[Type, Opt [SyntCat Op, Type]],																		-- An expression
 				[incKey, Type],																					-- Increase Type by 1
 				[decKey, Type]]																				-- One of the types
 	Op		-> [[plus],																							-- Self Explanatory
@@ -42,6 +43,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[idf],																							-- An identifier
 				[SyntCat String],																				-- A string
 				[Func]]
+	ArrayOp	-> [[idf, lbra, ArrayIndex, rbra]]
+	ArrayIndex -> [[Alt [SyntCat Nmbr] [idf]]]
 	Bool  	-> [[Alt [trueKey] [falseKey]]]
 	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
@@ -72,7 +75,7 @@ gequalsKey  = Keyword "be above"
 trueKey 	= Keyword "Aye"
 falseKey 	= Keyword "Nay"
 intKey 		= Keyword "doubloon"
-boolKey		= Keyword "bool"
+boolKey		= Keyword "order"
 stringKey	= Keyword "booty"
 arrayKey	= Keyword "treasure"
 ifExprKey	= Keyword "parley"
@@ -106,15 +109,15 @@ colon   = Symbol ":"
 point	= Symbol "."
 comma	= Symbol ","
 
-data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM
+data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM | ARRAYOP | ARRAYOP' | ARRAYOP''
 
 tokenizer :: State -> Int -> Int -> String -> [Token]
 tokenizer _ _ _ [] = []
-tokenizer s l c (' ':xs) 						= tokenizer s l (c+1) xs
-tokenizer s l c ('\t':xs) 						= tokenizer s l (c+3) xs
-tokenizer s l c ('\n':xs)						= tokenizer s (l+1) 0 xs
-tokenizer s l c ('*':'*':xs) 					= tokenizer s l (c+2) (rmLineComment xs)
-tokenizer s l c ('>':'>':xs) 					= tokenizer s l (c+2) (rmBlockComment xs)
+tokenizer s l c (' ':xs) 						= tokenizer s l 	(c+1) xs
+tokenizer s l c ('\t':xs) 						= tokenizer s l 	(c+3) xs
+tokenizer s l c ('\n':xs)						= tokenizer s (l+1) 0 	  xs
+tokenizer s l c ('*':'*':xs) 					= tokenizer s l 	(c+2) (rmLineComment xs)
+tokenizer s l c ('>':'>':xs) 					= tokenizer s l 	(c+2) (rmBlockComment xs)
 tokenizer s l c ('b':'e':xs) 					| checkCompare xs = (getKeyword keyStr, keyStr, l, c) : tokenizer s l (c+8) (rmComp xs True)
 												| otherwise = (equalsKey, "be", l, c) : tokenizer s l (c+2) xs
 												where 
@@ -123,48 +126,86 @@ tokenizer s l c (',':' ':'A':'r':'r':'r':'!':xs) 	= (endmark, getEndmark, l, c):
 tokenizer state l c str@(x:xs) =
 	case state of
 		ERROR 		->  error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l) ++ ":" ++ (show c))
-		BOOLID		-> (Idf, getWord (str), l, c)   : tokenizer BOOL l (c+ length (getWord str)) (getRest str)
-		BOOL 		-> (Bool, getWord str, l, c)    : tokenizer BOOL l (c + length (getWord str)) (getRest str)
-		STRID 		-> (Idf, getWord str, l, c)     : tokenizer STR l (c + length (getWord str)) (getRest str)
-		ARRAY 		-> (arrayKey, "treasure", l, c) : tokenizer ARRAYTYPE l c str
-		ARRAYID 	-> (Idf, getWord str, l, c) 	 : tokenizer ARRAYELEM l (c + length (getWord str)) (getRest str)
-		IDF         -> (Idf, getWord str, l, c) 	 : tokenizer START l (c + length (getWord str)) (getRest str)
+		BOOLID		-> (Idf, getWord (str), l, c)   : tokenizer BOOL 		l (calcC c str) (getRest str)
+		BOOL 		-> (Bool, getWord str, l, c)    : tokenizer BOOL 		l (calcC c str) (getRest str)
+		STRID 		-> (Idf, getWord str, l, c)     : tokenizer STR 		l (calcC c str) (getRest str)
+		ARRAY 		-> (arrayKey, "treasure", l, c) : tokenizer ARRAYTYPE 	l c str
+		ARRAYID 	-> (Idf, getWord str, l, c) 	: tokenizer ARRAYELEM 	l (calcC c str) (getRest str)
+		IDF         -> (Idf, getWord str, l, c) 	: tokenizer START 		l (calcC c str) (getRest str)
+		ARRAYOP     -> (Idf, getIdf str, l, c) 		: tokenizer ARRAYOP' 	l (c + length (getIdf str)) (rmIdf xs)
+		ARRAYOP'	| x == '[' 						-> symbolToken : tokenizer ARRAYOP'' l (c+1) xs
+					| x == ']'						-> symbolToken : tokenizer START l (c+1) xs
+				    | otherwise						-> tokenizer ERROR l c str
+				    where 
+				    	symbolToken = (getSymbol x, [x], l, c)
+		ARRAYOP''	| isNumber x 					-> (Nmbr, num, l, c) : tokenizer ARRAYOP' l (c + length num) (rmNum str)
+					| isLowercase x 				-> (Idf, idf, l, c) : tokenizer ARRAYOP' l (c + length idf) (rmIdf str)
+					| otherwise 					-> tokenizer ERROR l c str
+					where
+						idf = getIdf str
+						num = getNum str
 					-- START STATE
-		START 		| isKeyword $ getWord str 	 	-> tokenizer KEY l c str
-				 	| isString $ getString str  	-> tokenizer STR l c str
-				 	| isNumber x 					-> tokenizer NUM l c str
-				 	| isGramSymbol x 				-> tokenizer SYM l c str
-				 	| isArray str    				-> tokenizer ARRAY l c str
-				 	| otherwise 				    -> tokenizer IDF l c str
+		START 		| isKeyword $ getWord str 	 	-> tokenizer KEY 	 l c str
+				 	| isString $ getString str  	-> tokenizer STR 	 l c str
+				 	| isNumber x 					-> tokenizer NUM 	 l c str
+				 	| isGramSymbol x 				-> tokenizer SYM 	 l c str
+				 	| isArray str    				-> tokenizer ARRAY 	 l c str
+				 	| isArrayOp $ getWord str 		-> tokenizer ARRAYOP l c str
+				 	| otherwise 				    -> tokenizer IDF 	 l c str
 					-- SYM STATE
-		SYM 		| elem x "+-*/" 				-> (Op, [x], l, c) : tokenizer START l (c+1) xs
+		SYM 		| elem x "+-*/" 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
 			   		| otherwise 					-> (getSymbol x, [x], l, c) : tokenizer START l (c+1) xs
 			   		-- NUM STATE
-		NUM 		| isNumber x 					-> (Nmbr, getNum str, l, c) : tokenizer START l (c + length (getNum str)) (rmNum str) 
+		NUM 		| isNumber x 					-> (Nmbr, getNum str, l, c) : tokenizer START l newC rest 
 					| otherwise 					-> tokenizer IDF l c str
+					where
+						newC = c + length (getNum str)
+						rest = rmNum str
 					-- STR STATE
-		STR 		| isString (getString str) 		-> (String, getString str, l, c) : tokenizer START l (c + length (getString str)) (getRest str)
+		STR 		| isString (getString str) 		-> (String, getString str, l, c) : tokenizer START l newC rest
 					| otherwise 					-> tokenizer ERROR l c str
+					where
+						newC = c + length (getString str)
+						rest = getRest str
 					-- KEY STATE
-		KEY 		| getKey str == intKey 			-> makeKeyToken str l c : tokenizer NUM l (c + length (getWord str)) (getRest xs)
-					| getKey str == boolKey 		-> makeKeyToken str l c : tokenizer BOOLID l (c + length (getWord str)) (getRest xs)
-					| getKey str == stringKey 		-> makeKeyToken str l c : tokenizer STRID l (c + length (getWord str)) (getRest xs)
-					| otherwise 					-> makeKeyToken str l c : tokenizer START l (c + length (getWord str)) (getRest xs)
+		KEY 		| keyword == intKey 			-> newToken : tokenizer NUM l newC rest
+					| keyword == boolKey 			-> newToken : tokenizer BOOLID l newC rest
+					| keyword == stringKey 			-> newToken : tokenizer STRID l newC rest
+					| otherwise 					-> newToken : tokenizer START l newC rest
+					where 
+						word = getWord str
+						newC = c + length word
+						rest = getRest xs
+						keyword = getKeyword word
+						newToken = (keyword, word, l, c)
 					-- ARRAYTYPE STATE
-		ARRAYTYPE 	| getAType str == intKey 		-> (Nmbr, getArrayType str, l, c)   : tokenizer ARRAYID l (c + length (getArrayType str)) (getRest xs)
-					| getAType str == boolKey 		-> (Bool, getArrayType str, l, c)   : tokenizer ARRAYID l (c + length (getArrayType str)) (getRest xs)
-					| getAType str == stringKey 	-> (String, getArrayType str, l, c) : tokenizer ARRAYID l (c + length (getArrayType str)) (getRest xs)
-					| otherwise 					-> tokenizer ERROR l c str
+		ARRAYTYPE 	| arrayKey == intKey 		-> (Nmbr, arrayType, l, c)   : nextState
+					| arrayKey == boolKey 		-> (Bool, arrayType, l, c)   : nextState
+					| arrayKey == stringKey 	-> (String, arrayType, l, c) : nextState
+					| otherwise 				-> tokenizer ERROR l c str
+					where
+						nextState = tokenizer ARRAYID l newC rest
+						arrayType = getArrayType str
+						arrayKey = getKeyword arrayType
+						newC = c + length arrayType
+						rest = getRest xs
 					-- ARRAYELEM STATE
-		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c) 	  : tokenizer ARRAYELEM (c+1) l xs
-					| isNumber x 					-> (Nmbr, getNum str, l, c) 	  : tokenizer ARRAYELEM (c + length (getNum str)) l (rmNum xs)
-					| isBoolean $ getRestW str      -> (Bool, getRestW str, l, c) 	  : tokenizer ARRAYELEM l (c + length (getRestW str)) (rmUpTo xs [',', ']'])
-					| otherwise 					-> (String, getString str, l, c) : tokenizer ARRAYELEM l (c + length (getString str)) (rmUpTo xs [',', ']'])
+		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c): tokenizer ARRAYELEM (c+1) l xs
+					| isNumber x 					-> (Nmbr, num, l, c) 	   : tokenizer ARRAYELEM l (c + length num) (rmNum xs)
+					| isBoolean restW 			    -> (Bool, restW, l, c) 	   : tokenizer ARRAYELEM l (c + length restW) rest
+					| otherwise 					-> (String, string, l, c)  : tokenizer ARRAYELEM l (c + length string) rest
+					where 
+						rest = rmUpTo xs [',', ']']
+						restW = getUpTo str [',',']']
+						string = getString str
+						num = getNum str
 
-getAType str = getKeyword $ getArrayType str
-getKey str = getKeyword $ getWord str
-makeKeyToken str l c = (getKeyword $ getWord str, getWord str, l, c)
-getRestW str = getUpTo str [',',']'] 
+calcC c str = c + length (getWord str)
+
+isArrayOp :: String -> Bool
+isArrayOp [] = False
+isArrayOp (x:xs) = x /= '[' &&  contains (x:xs) '[' && contains (x:xs) ']'
+
 
 checkCompare :: String -> Bool
 checkCompare str = isCompKey $ getCompare str True
@@ -274,6 +315,16 @@ getWord (x:xs)
 	| elem x " +-*/,()." = []
 	| otherwise = x: getWord xs
 
+getIdf :: String -> String
+getIdf [] = []
+getIdf (x:xs) | elem x (" +-*/,().[]") = []
+			  | otherwise = x : getIdf xs
+
+rmIdf :: String -> String
+rmIdf [] = []
+rmIdf (x:xs) | elem x (" +-*/,().[]") = (x:xs)
+			 | otherwise = rmIdf xs
+
 getUpTo :: String -> [Char] -> String
 getUpTo [] _ = []
 getUpTo (s:str) chars | elem s chars = []
@@ -302,7 +353,7 @@ allKeywords = [(progKey, "fleet"),
 				(trueKey, "Aye"),
 				(falseKey, "Nay"),
 				(intKey, "doubloon"),
-				(boolKey, "bool"),
+				(boolKey, "order"),
 				(stringKey, "booty"),
 				(arrayKey, "treasure"),
 				(ifExprKey, "parley"),
@@ -351,7 +402,7 @@ allSymbols = [ (lpar, '('),
 
 
 allTypes :: [String]
-allTypes = ["doubloon", "booty", "bool"]
+allTypes = ["doubloon", "booty", "order"]
 
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
@@ -384,18 +435,17 @@ test = unlines ["fleet Prog {",
 			   ]
 
 test2 = unlines ["fleet Program {",	
-		"doubloon c be n +m, Arrr!",
-		"booty d be \"Hello\", Arrr!",
-		"bool h be Aye, Arrr!",
 		"doubloon[] a be [1,3,5], Arrr!",
+		--"doubloon c be a[1], Arrr!",
 		"}"
 		]
 
 
 
-test3 = unlines ["fleet Fleet {",
-				"    doubloon a be 0, Arrr!",
-				"    a be 1, Arrr!",
+test3 = unlines ["fleet Program {",
+				"   ship a(doubloon b) {",
+				"   }",
+				"   a(1), Arrr!",
 				"}"
 				]
 
@@ -438,7 +488,7 @@ convert tree = case tree of
 	(PNode _ ((PLeaf (Keyword "avast", s, _, _)): x: []))															-> ReturnNode s (convert x)
 	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x: x':[]))										-> BootyNode 	(convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x: x':[]))									-> DoubloonNode (convert x) (convert x')
-	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x: x':[]))											-> BoolNode 	(convert x) (convert x')
+	(PNode _ ((PNode _ [PLeaf (Keyword "order", "order", _, _)]): x: x':[]))										-> BoolNode 	(convert x) (convert x')
 	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x: x':[]))									-> TreasureNode (convert x) (convert x')
 	(PNode _ (PLeaf (Idf, s, l, c): x: []))																-> AssignNode 	(VarNode s l c) (convert x)
 	(PNode _ (x: (PLeaf (Op,s, _, _)): x': []))																		-> OpNode s 	(convert x) (convert x')
@@ -453,9 +503,10 @@ convert tree = case tree of
 	(PNode Func ((PLeaf (Idf, s, _, _)): xs))																		-> DoFuncNode s (map convert xs)
 	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))											-> FuncNode s [] (map convert xs)
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0 0)
-	(PNode _ ((PNode _ [PLeaf (Keyword "bool", "bool", _, _)]): x:[]))												-> FuncValNode 	(convert x) (VarNode "Bool" 0 0)
+	(PNode _ ((PNode _ [PLeaf (Keyword "order", "order", _, _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "Bool" 0 0)
 	(PNode _ ((PNode _ [PLeaf (Keyword "treasure", "treasure", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Array" 0 0)
 	(PNode _ ((PNode _ [PLeaf (Keyword "booty", "booty", _, _)]): x:[]))											-> FuncValNode 	(convert x) (VarNode "String" 0 0)
+	(PNode _ ((PNode ArrayOp [x, PNode ArrayIndex [x']]):[]))													    -> ArrayOpNode 	(convert x) (convert x')							
 	(PNode _ (x: (PLeaf (Keyword "be",s, _, _)): x': []))															-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
@@ -486,6 +537,7 @@ data Tree = VarNode 	String Int Int
 		  | DoFuncNode	String [Tree]
 		  | ArrayNode   Tree Tree [Tree]
 		  | ZupaNode	String [Tree]
+		  | ArrayOpNode Tree Tree
 		  deriving (Eq, Show)
 
 data BoolEx = Comp String Tree Tree
@@ -494,6 +546,7 @@ data BoolEx = Comp String Tree Tree
 
 toRTree :: Tree -> RoseTree
 toRTree (VarNode s l c) 			= RoseNode ((show l) ++ ":" ++ (show c) ++ ":" ++ s) []
+toRTree (ArrayOpNode t1 t2)			= RoseNode "arrayOp" [toRTree t1, toRTree t2]
 toRTree (BootyNode t1 t2) 			= RoseNode "strDecl" [toRTree t1, toRTree t2]
 toRTree (DoubloonNode t1 t2) 		= RoseNode "intDecl" [toRTree t1, toRTree t2]
 toRTree (BoolNode t1 t2) 			= RoseNode "boolDecl" [toRTree t1, toRTree t2]

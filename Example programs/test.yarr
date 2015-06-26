@@ -2,5 +2,5 @@ fleet Fleet {
 	ship a(doubloon b) {
 	}
 
-	a(Aye), Arrr!
+	a(1), Arrr!
 }
