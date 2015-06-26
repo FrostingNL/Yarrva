@@ -446,15 +446,12 @@ test2 = unlines ["fleet Program {",
 		"}"
 		]
 
-
-
-test3 = unlines ["fleet Fleet {",
-	"order b be Aye, Arrr!",
-	"ship a (doubloon b) {",
-	"}",
-	"a(Aye), Arrr!",
-	"}"]
-				
+test3 = unlines ["fleet Program {",
+				"   ship a(doubloon b) {",
+				"   }",
+				"   a(1), Arrr!",
+				"}"
+				]
 
 tokens = tokenizer START 0 0
 

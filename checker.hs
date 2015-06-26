@@ -216,6 +216,7 @@ getValue (VarNode s _ _) 	| s == "Aye" = "1"
 getValue (OpNode s _ _) = s
 getValue (FuncNode s _ _) = s
 getValue (DoubloonNode t1 t2) = "doubloon " ++ getValue t1 ++ " be " ++ getValue t2
+getValue (FuncValNode t1 t2) = getValue t1 ++ " " ++ getValue t2
 getValue (GiftNode t1) = "gift " ++ getValue t1
 
 allT = all (==True)

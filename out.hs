@@ -1,32 +1,23 @@
 import Sprockell.System
 
 prog = [
-       -- navigate(doubloon i be 0. i be below 5. gift i)
-       -- doubloon i be 0
-       Const 0 RegA,
-       Store RegA (Addr 1),
-       Compute Add PC Zero RegE,
-       Push RegE,
-       Const 5 RegA,
-       Load (Addr 1) RegB,
-       Compute Gt RegB RegA RegA,
-       Branch RegA (Rel(28)),
-       -- doubloon a be 0
-       Const 0 RegA,
+       -- a(b Int, c Int)
+       Const 3 RegA,
+       Compute Add PC RegA RegE,
+       Store RegE (Addr 1),
+       Jump (Rel(20)),
+       Pop RegA,
        Store RegA (Addr 3),
-       -- whirlpool(a be below 2)
-       Compute Add PC Zero RegE,
-       Push RegE,
-       Const 2 RegA,
-       Load (Addr 3) RegB,
-       Compute Gt RegB RegA RegA,
-       Branch RegA (Rel(13)),
-       -- gift a
-       Load (Addr 3) RegA,
-       Const 1 RegB,
-       Compute Add RegA RegB RegA,
-       Store RegA (Addr 3),
-       -- parrot (a)
+       Pop RegA,
+       Store RegA (Addr 2),
+       -- parrot (b)
+       Load (Addr 2) RegA,
+       Const (ord '0') RegB,
+       Compute Add RegA RegB RegB,
+       Write RegB stdio,
+       Read (Addr 0x0),
+       Receive RegB,
+       -- parrot (c)
        Load (Addr 3) RegA,
        Const (ord '0') RegB,
        Compute Add RegA RegB RegB,
@@ -34,16 +25,30 @@ prog = [
        Read (Addr 0x0),
        Receive RegB,
        Pop RegE,
+       Push RegA,
        Jump (Ind RegE),
-       Pop RegE,
-       -- gift i
+       -- a(1, 2)
+       Const 8 RegA,
+       Compute Add PC RegA RegE,
+       Push RegE,
+       Const 1 RegA,
+       Push RegA,
+       Const 2 RegA,
+       Push RegA,
        Load (Addr 1) RegA,
-       Const 1 RegB,
-       Compute Add RegA RegB RegA,
-       Store RegA (Addr 1),
-       Pop RegE,
-       Jump (Ind RegE),
-       Pop RegE,
+       Jump (Ind RegA),
+       Pop RegA,
+       -- a(3, 4)
+       Const 8 RegA,
+       Compute Add PC RegA RegE,
+       Push RegE,
+       Const 3 RegA,
+       Push RegA,
+       Const 4 RegA,
+       Push RegA,
+       Load (Addr 1) RegA,
+       Jump (Ind RegA),
+       Pop RegA,
        -- END
        EndProg
        ]

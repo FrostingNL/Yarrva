@@ -99,19 +99,30 @@ toSprockell list tree =
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
-		(FuncNode s xs xs')					->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
-												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+3)) ++ ")),\n" ++
+		n@(FuncNode s xs xs')					->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+												spacing ++ "Const 3 RegA,\n" ++
+												spacing ++ "Compute Add PC RegA RegE,\n" ++ 
+												spacing ++ "Store RegE (Addr " ++ (show (getInt list n)) ++ "),\n" ++ 
+												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+(calcLen xs)+4)) ++ ")),\n" ++
+												popFunc list xs ++ 
 												(concat (map (toSprockell list) xs')) ++
 												spacing ++ "Pop RegE,\n" ++
 												spacing ++ "Push RegA,\n" ++	
-												spacing ++ "Jump RegE,\n"
+												spacing ++ "Jump (Ind RegE),\n"
 
-		(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
-												spacing ++ "Const 2 RegA"
+		n@(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+												spacing ++ "Const " ++ (show ((calcLen xs)+4)) ++ " RegA,\n" ++ 
 												spacing ++ "Compute Add PC RegA RegE,\n" ++
 												spacing ++ "Push RegE,\n" ++
-												spacing ++ pushFunc xs
+												pushFunc list xs ++ 
+												spacing ++ "Load (Addr " ++ (show (getInt list n)) ++ ") RegA,\n" ++ 
+												spacing ++ "Jump (Ind RegA),\n" ++
+												spacing ++ "Pop RegA,\n" 
 		_					-> 	""
+
+funcText :: [Tree] -> String
+funcText [x]    = (getValue x)
+funcText (x:xs) = (getValue x) ++ ", " ++funcText xs
 
 pushFunc :: [(String, Int)] -> [Tree] -> String
 pushFunc list []  	 =  "" 
@@ -120,10 +131,10 @@ pushFunc list (x:xs) = 	spacing ++ pNode list x ++ " RegA,\n" ++
 						pushFunc list xs
 
 popFunc :: [(String, Int)] -> [Tree] -> String
-popFunc list []  	 =  "" 
-popFunc list (x:xs) = 	spacing ++ pNode list x ++ " RegA,\n" ++ 
-						spacing ++ "Push RegA,\n" ++
-						pushFunc list xs
+popFunc list []  	= "" 
+popFunc list (n:xs) = popFunc list xs ++
+						spacing ++ "Pop RegA,\n" ++
+					  spacing ++ "Store RegA (Addr " ++ (show (getInt list n)) ++ "),\n"
 
 calcLen :: [Tree] -> Int
 calcLen ((DoubloonNode (VarNode _ _ _) (VarNode _ _ _)):xs)	= 2 + calcLen xs
@@ -139,6 +150,8 @@ calcLen ((ForNode t1 t2 t3 xs): xs')						= 10 + calcLen [t1] + calcLen [t2] + c
 calcLen ((ElseNode xs): xs')								= 1 + calcLen xs + calcLen xs'
 calcLen ((GiftNode t1): xs)									= 4 + calcLen xs
 calcLen ((PrintNode t1): xs)								= 6 + calcLen xs
+calcLen ((FuncValNode t1 t2): xs) 							= 2 + calcLen xs
+calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
 calcLen _													= 0
 
 boolText :: BoolEx -> String
@@ -204,16 +217,23 @@ addToList ((ForNode t1 _ _ xs): xs') i 				= list' ++ list ++ addToList xs' (snd
 													where
 														list'= addToList [t1] i
 														list = addToList xs (snd (last list') + 1)
-addToList ((FuncNode s xs xs'): xs'') i 			= list ++ list' ++ addToList xs'' (snd (last list') + 1)
+addToList ((FuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToList xs'' (snd (last list') + 1))
 													where
-														list = addToList xs i
+														list = addToList xs (i+1)
 														list'= addToList xs' (snd (last list) + 1)
+addToList ((FuncValNode t1 t2): xs) i 				= ((getValue t1), (i+1)): addToList xs (i+1)
 addToList ((PrintNode xs): xs'') i 					= addToList xs'' (i-1)
 addToList _ i 										= []
 
 getInt :: [(String, Int)] -> Tree -> Int
 getInt [] _ 							= 0
 getInt ((s,i):list) n@(VarNode nS _ _)	| s == nS	= i
+										| otherwise = getInt list n
+getInt ((s,i):list) n@(FuncNode nS _ _)	| s == nS	= i
+										| otherwise = getInt list n
+getInt ((s,i):list) n@(DoFuncNode nS _)	| s == nS	= i
+										| otherwise = getInt list n
+getInt ((s,i):list) n@(FuncValNode r t) | (getValue r) == s = i
 										| otherwise = getInt list n
 getInt list _ 							= 0
 
