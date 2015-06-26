@@ -1,9 +1,7 @@
 fleet Fleet {
-	navigate(doubloon i be 0. i be below 5. gift i) {
-		doubloon a be 0, Arrr!
-		whirlpool(a be below 2) {
-			gift a, Arrr!
-			parrot a, Arrr!
-		}
+	ship a(doubloon b) {
+	
 	}
+
+	a(Aye), Arrr!
 }

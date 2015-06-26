@@ -99,7 +99,31 @@ toSprockell list tree =
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
+		(FuncNode s xs xs')					->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+3)) ++ ")),\n" ++
+												(concat (map (toSprockell list) xs')) ++
+												spacing ++ "Pop RegE,\n" ++
+												spacing ++ "Push RegA,\n" ++	
+												spacing ++ "Jump RegE,\n"
+
+		(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+												spacing ++ "Const 2 RegA"
+												spacing ++ "Compute Add PC RegA RegE,\n" ++
+												spacing ++ "Push RegE,\n" ++
+												spacing ++ pushFunc xs
 		_					-> 	""
+
+pushFunc :: [(String, Int)] -> [Tree] -> String
+pushFunc list []  	 =  "" 
+pushFunc list (x:xs) = 	spacing ++ pNode list x ++ " RegA,\n" ++ 
+						spacing ++ "Push RegA,\n" ++
+						pushFunc list xs
+
+popFunc :: [(String, Int)] -> [Tree] -> String
+popFunc list []  	 =  "" 
+popFunc list (x:xs) = 	spacing ++ pNode list x ++ " RegA,\n" ++ 
+						spacing ++ "Push RegA,\n" ++
+						pushFunc list xs
 
 calcLen :: [Tree] -> Int
 calcLen ((DoubloonNode (VarNode _ _ _) (VarNode _ _ _)):xs)	= 2 + calcLen xs
