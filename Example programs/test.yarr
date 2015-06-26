@@ -1,7 +1,9 @@
 fleet Fleet {
-<<<<<<< HEAD
-	ship a(doubloon b) {
+	ship a(doubloon b, doubloon c) {
+		parrot b, Arrr!
+		parrot c, Arrr!
 	}
 
-	a(1), Arrr!
+	a(1, 2), Arrr!
+	a(3, 4), Arrr!
 }
