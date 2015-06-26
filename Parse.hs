@@ -259,7 +259,7 @@ parserGen gr (nt:rule) (nt0,ts,(cat,str, l,c):tokens)
 parse :: Grammar -> Alphabet -> [Token] -> ParseTree
 
 parse gr s tokens	| ptrees /= []	= head ptrees
-			        | otherwise	= error "PARSING ERROR: parse error - somewhere :-) - add your own traceShows in parseGen"
+			        | otherwise	= error ("Parse: parse error - somewhere :-) - add your own traceShows in parseGen")
 	where
 	  ptrees = [ t  | r <- gr s
 			, (t,rem) <- parserGen gr r (s,[],tokens)

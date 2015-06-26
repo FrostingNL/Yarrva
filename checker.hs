@@ -26,6 +26,7 @@ checkUsage t@(s,p) tree =
 		(BoolExNode (Comp _ t1 t2))	-> usage t t1 || usage t t2
 		(BoolExNode (Boolean t1))	-> usage t t1
 		(GiftNode t1)				-> usage t t1
+		(ArrayNode t1 t2 _)			-> usage t t2
 		(PlunderNode t1)			-> usage t t1
 		(FuncValNode t1 t2)			-> usage t t1
 		(PrintNode t1)				-> usage t t1
@@ -88,7 +89,7 @@ addToScope ((DoubloonNode (VarNode s l c) t): xs)	| checkType t Int []	= (s, Int
 													| otherwise 			= incType t "Integer" l c
 addToScope ((BoolNode (VarNode s l c) t): xs)		| checkType t Boo []	= (s, Boo): addToScope xs 
 													| otherwise 			= incType t "Boolean" l c
-addToScope ((TreasureNode (VarNode s l c) t): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
+addToScope ((ArrayNode (VarNode s l c) t v): xs)	| checkType t Boo []	= (s, Arr): addToScope xs 
 													| otherwise 			= incType t "Array" l c
 addToScope ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs)	
 													= (s, (getTypeFromString s2)): addToScope xs 
@@ -170,6 +171,7 @@ inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumb
 inScope list tree =
 	case tree of
 		(BoolExNode (Boolean t1)) 	-> inScope list t1
+		(ArrayNode t1 t2 _)			-> inScope list t2
 		(GiftNode t1) 				-> inScope list t1
 		(PlunderNode t1) 			-> inScope list t1
 		(PrintNode t1)				-> inScope list t1
