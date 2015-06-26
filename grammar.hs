@@ -127,7 +127,6 @@ tokenizer state l c str@(x:xs) =
 	case state of
 		ERROR 		->  error ("Shiver me timbers! You done it wrong, Arrr! On line: " ++ (show l) ++ ":" ++ (show c))
 		BOOLID		-> (Idf, getWord (str), l, c)   : tokenizer BOOL 		l (calcC c str) (getRest str)
-		BOOL 		-> (Bool, getWord str, l, c)    : tokenizer BOOL 		l (calcC c str) (getRest str)
 		STRID 		-> (Idf, getWord str, l, c)     : tokenizer STR 		l (calcC c str) (getRest str)
 		ARRAY 		-> (arrayKey, "treasure", l, c) : tokenizer ARRAYTYPE 	l c str
 		ARRAYID 	-> (Idf, getWord str, l, c) 	: tokenizer ARRAYELEM 	l (calcC c str) (getRest str)
@@ -155,6 +154,11 @@ tokenizer state l c str@(x:xs) =
 					-- SYM STATE
 		SYM 		| elem x "+-*/" 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
 			   		| otherwise 					-> (getSymbol x, [x], l, c) : tokenizer START l (c+1) xs
+			   		-- BOOL STATE
+		BOOL 		| isBoolean bool 				-> (Bool, bool, l, c)    : tokenizer BOOL 		l (calcC c str) (getRest str)
+				    | otherwise 					-> tokenizer START l c str
+				    where
+				    	bool = getWord str
 			   		-- NUM STATE
 		NUM 		| isNumber x 					-> (Nmbr, getNum str, l, c) : tokenizer START l newC rest 
 					| otherwise 					-> tokenizer IDF l c str
@@ -446,12 +450,14 @@ test2 = unlines ["fleet Program {",
 		"}"
 		]
 
-test3 = unlines ["fleet Program {",
-				"   ship a(doubloon b) {",
-				"   }",
-				"   a(1), Arrr!",
-				"}"
-				]
+test3 = unlines ["fleet Fleet {",
+	"ship a(doubloon b, order c) {",
+		"parrot b, Arrr!",
+		"parrot c, Arrr!",
+	"}",
+	"a(1, 2), Arrr!",
+	"a(3, 4), Arrr!",
+      "}"]
 
 tokens = tokenizer START 0 0
 
