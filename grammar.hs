@@ -470,17 +470,13 @@ test2 = unlines ["fleet Program {",
 
 test3 = unlines ["fleet Fleet {",
 	"doubloonShip a(doubloon b, order c) {",
-		"parrot b, Arrr!",
-		"parrot c, Arrr!",
 	"}",
-	"a(1, 2), Arrr!",
-	"a(3, 4), Arrr!",
       "}"]
 
 tokens = tokenizer START 0 0
 
 test0 = parse grammar Program $ tokens test
-test1 = parse grammar Program $ tokens sampleFunction
+test1 = parse grammar Program $ tokens test3
 
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
@@ -525,7 +521,10 @@ convert tree = case tree of
 	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))										-> WhileNode 	(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "treasure", _,_, _)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
 	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))								-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
-	(PNode _ ((PLeaf (Keyword "ship", _, _, _)): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) -> FuncNode s 	(map convert xs') (map convert xs)
+	(PNode _ ((PNode _ [PLeaf (k, _, _, _)]): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) 	| k == intFunction	-> IntFuncNode s 	(map convert xs') (map convert xs)
+																													| k == boolFunction	-> BoolFuncNode s 	(map convert xs') (map convert xs)
+																													| k == strFunction	-> StrFuncNode s 	(map convert xs') (map convert xs)
+																													| otherwise		  	-> ArrFuncNode s 	(map convert xs') (map convert xs)
 	(PNode _ ((PLeaf (Keyword "heave", s, _, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
 	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))														-> ZupaNode s 	(map convert xs)
 	(PNode _ ((PNode Func ((PLeaf (Idf, s, _, _)): xs)):_))															-> DoFuncNode s (map convert xs)
@@ -559,6 +558,10 @@ data Tree = VarNode 	String Int Int
 		  | ForNode		Tree Tree Tree [Tree]
 		  | WhileNode	Tree [Tree]
 		  | FuncNode 	String [Tree] [Tree]
+		  | BoolFuncNode 	String [Tree] [Tree]
+		  | StrFuncNode 	String [Tree] [Tree]
+		  | IntFuncNode 	String [Tree] [Tree]
+		  | ArrFuncNode 	String [Tree] [Tree]
 		  | FuncValNode	Tree Tree
 		  | PrintNode	Tree
 		  | ReturnNode	String Tree
@@ -591,6 +594,10 @@ toRTree (ElseNode list)				= RoseNode "else" (map toRTree (list))
 toRTree (ForNode t1 t2 t3 list)		= RoseNode "for" (map toRTree (t1:t2:t3:list))
 toRTree (WhileNode t1 list)			= RoseNode "while" (map toRTree (t1:list))
 toRTree (FuncNode s list1 list2)	= RoseNode s (map toRTree (list1 ++ list2))
+toRTree (StrFuncNode s list1 list2)	= RoseNode ("strFunc " ++ s) (map toRTree (list1 ++ list2))
+toRTree (IntFuncNode s list1 list2)	= RoseNode ("intFunc " ++ s) (map toRTree (list1 ++ list2))
+toRTree (BoolFuncNode s list1 list2)= RoseNode ("boolFunc " ++ s) (map toRTree (list1 ++ list2))
+toRTree (ArrFuncNode s list1 list2)	= RoseNode ("arrFunc " ++ s) (map toRTree (list1 ++ list2))
 toRTree (FuncValNode t1 t2)			= RoseNode "param" [toRTree t1, toRTree t2]
 toRTree (PrintNode t1)				= RoseNode "print" [toRTree t1]
 toRTree (ReturnNode s t1)			= RoseNode s [toRTree t1]

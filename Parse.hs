@@ -47,6 +47,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Array
 		| ArrayOp
 		| ArrayIndex
+		| Function
 
 		deriving (Eq,Show)
 
