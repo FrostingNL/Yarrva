@@ -63,6 +63,7 @@ data Types 	= Int
 			| Boo
 			| Str
 			| Arr
+			| Fun
 			| Err
 			deriving (Eq,Show)
 

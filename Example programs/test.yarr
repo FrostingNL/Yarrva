@@ -1,13 +1,16 @@
 fleet Fleet {
-	ship a(doubloon b, doubloon c) {
-		parrot b, Arrr!
-		parrot c, Arrr!
-		ship d(doubloon e) {
-			parrot e, Arrr!
-		}
+	ship a(doubloon i) {
+		i be i+1, Arrr!
+		avast i, Arrr!
 	}
 
-	a(1, 2), Arrr!
-	a(3, 4), Arrr!
-	d(5), Arrr!
+	ship b(doubloon i) {
+		i be i+2, Arrr!
+		avast i, Arrr!
+	}
+
+	flagship() {
+		doubloon x be (a(3)+b(2)), Arrr!
+		parrot x, Arrr!
+	}
 }

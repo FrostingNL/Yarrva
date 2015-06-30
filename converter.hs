@@ -11,14 +11,21 @@ import Checker
 main = start "Example programs/test.yarr"
 
 start :: FilePath -> IO ()
-start input = do
-	inHandle <- openFile input ReadMode  
-	contents <- hGetContents inHandle
-	putStrLn (contents)
-	outHandle <- openFile "out.hs" WriteMode
-	hPutStr outHandle $ toSprockell [] $ convert $ parse grammar Program $ tokens contents
-	hClose inHandle
-	hClose outHandle
+start input 
+	= do
+		inHandle <- openFile input ReadMode  
+		contents <- hGetContents inHandle
+		putStrLn (contents)
+		outHandle <- openFile "out.hs" WriteMode
+		if True --typeAndScopeChecker $ convert $ parse grammar Program $ tokens contents
+			then do 
+				hPutStr outHandle $ toSprockell [] $ convert $ parse grammar Program $ tokens contents
+				hClose inHandle
+				hClose outHandle
+			else do
+				putStrLn "SDS"
+				hClose inHandle
+				hClose outHandle
 
 toSprockell :: [(String, Int)] -> Tree -> String
 toSprockell list tree = 
@@ -27,9 +34,12 @@ toSprockell list tree =
 								printNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 		
-		(BoolNode t1 t2)	-> 	spacing ++ "-- bool " ++ (getValue t1) ++ " be " ++ 
+		(BoolNode t1 t2)	-> 	spacing ++ "-- order " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
+
+		(ArrayNode t1 t2 xs)->  spacing ++ "-- " ++ (getValue t1) ++ "[] " ++ (getValue t2) ++ " be [" ++ funcText xs ++ "]\n" ++ 
+								storeArray t2 xs
 
 		(AssignNode t1 t2) 	-> 	spacing ++ "-- " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++
@@ -59,6 +69,12 @@ toSprockell list tree =
 								spacing ++ pNode list t1 ++ " RegA,\n" ++
 								spacing ++ "Const 1 RegB,\n" ++
 								spacing ++ "Compute Add RegA RegB RegA,\n" ++ 
+								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
+
+		(PlunderNode t1)	-> 	spacing ++ "-- plunder " ++ (getValue t1) ++ "\n" ++
+								spacing ++ pNode list t1 ++ " RegA,\n" ++
+								spacing ++ "Const 1 RegB,\n" ++
+								spacing ++ "Compute Sub RegA RegB RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 
 		(IfNode (BoolExNode t1) xs)			-> 	spacing ++ "-- parley(" ++ boolText t1 ++ ")\n" ++ 
@@ -99,15 +115,23 @@ toSprockell list tree =
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
-		n@(FuncNode s xs xs')					->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+		n@(ReturnNode _ t1)					->	spacing ++ "-- avast " ++ (getValue t1) ++ "\n" ++
+												spacing ++ "Pop RegE,\n" ++
+												spacing ++ pNode list t1 ++ " RegA,\n" ++
+												spacing ++ "Push RegA,\n" ++
+												spacing ++ "Push RegE,\n"
+
+		n@(FuncNode "flagship" xs xs')		-> 	spacing ++ "-- flagship()\n" ++
+												(concat (map (toSprockell list) xs'))
+
+		n@(FuncNode s xs xs')				->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const 3 RegA,\n" ++
 												spacing ++ "Compute Add PC RegA RegE,\n" ++ 
 												spacing ++ "Store RegE (Addr " ++ (show (getInt list n)) ++ "),\n" ++ 
-												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+(calcLen xs)+4)) ++ ")),\n" ++
+												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+(calcLen xs)+3)) ++ ")),\n" ++
 												popFunc list xs ++ 
 												(concat (map (toSprockell list) xs')) ++
 												spacing ++ "Pop RegE,\n" ++
-												spacing ++ "Push RegA,\n" ++	
 												spacing ++ "Jump (Ind RegE),\n"
 
 		n@(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
@@ -116,13 +140,16 @@ toSprockell list tree =
 												spacing ++ "Push RegE,\n" ++
 												pushFunc list xs ++ 
 												spacing ++ "Load (Addr " ++ (show (getInt list n)) ++ ") RegA,\n" ++ 
-												spacing ++ "Jump (Ind RegA),\n" ++
-												spacing ++ "Pop RegA,\n" 
+												spacing ++ "Jump (Ind RegA),\n"
+
 		_					-> 	""
+
+storeArray :: Tree -> [Tree] ->  -> String
+storeArray idf (x:xs) list 	= spacing ++ pNode list x
 
 funcText :: [Tree] -> String
 funcText [x]    = (getValue x)
-funcText (x:xs) = (getValue x) ++ ", " ++funcText xs
+funcText (x:xs) = (getValue x) ++ ", " ++ funcText xs
 
 pushFunc :: [(String, Int)] -> [Tree] -> String
 pushFunc list []  	 =  "" 
@@ -153,6 +180,7 @@ calcLen ((PrintNode t1): xs)								= 6 + calcLen xs
 calcLen ((FuncNode s t1 t2): xs)							= 7 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((FuncValNode t1 t2): xs) 							= 2 + calcLen xs
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
+calcLen ((ReturnNode _ _): xs)								= 4 + calcLen xs
 calcLen _													= 0
 
 boolText :: BoolEx -> String
@@ -173,7 +201,7 @@ printNode list t 				= toSprockell list t ++ spacing ++ "Pop "
 
 pNode :: [(String, Int)] -> Tree -> String
 pNode list t@(VarNode _ _ _)	= load list t
-pNode list t 				= toSprockell list t ++ spacing ++ "Pop "
+pNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
 load :: [(String, Int)] -> Tree -> String
 load list t | getInt list t /= 0 	= "Load (Addr " ++ (show (getInt list t)) ++ ")"
@@ -200,31 +228,36 @@ addToList [] _										= []
 addToList ((BootyNode (VarNode s l _) t): xs)	i	= (s, (i+1)): addToList xs (i+1)
 addToList ((DoubloonNode (VarNode s l _) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
 addToList ((BoolNode (VarNode s l _) t): xs) i		= (s, (i+1)): addToList xs (i+1)
-addToList ((TreasureNode (VarNode s l _) t): xs) i 	= (s, (i+1)): addToList xs (i+1)
-addToList ((IfNode t1 xs): xs') i 					= list ++ addToList xs' (snd (last list) + 1)
+addToList ((ArrayNode _ (VarNode s _ _) t): xs) i 	= (s, (i+1)): addToList xs (i+1+(length t))
+addToList ((IfNode t1 xs): xs') i 					= list ++ addToList xs' (getNew list)
 													where
 														list = addToList xs i
-addToList ((IfElseNode t1 xs t2): xs') i 				= list ++ list' ++ addToList xs' (snd (last list) + 1)
+addToList ((IfElseNode t1 xs t2): xs') i 			= list ++ list' ++ addToList xs' (getNew (list ++ list'))
 													where
 														list = addToList xs i
 														list' = addToList [t2] i
-addToList ((ElseNode xs): xs') i 					= list ++ addToList xs' (snd (last list) + 1)
+addToList ((ElseNode xs): xs') i 					= list ++ addToList xs' (getNew list)
 													where
 														list = addToList xs i
-addToList ((WhileNode t1 xs): xs') i 				= list ++ addToList xs' (snd (last list) + 1)
+addToList ((WhileNode t1 xs): xs') i 				= list ++ addToList xs' (getNew list)
 													where
 														list = addToList xs i
-addToList ((ForNode t1 _ _ xs): xs') i 				= list' ++ list ++ addToList xs' (snd (last list) + 1)
+addToList ((ForNode t1 _ _ xs): xs') i 				= list' ++ list ++ addToList xs' (getNew (list' ++ list))
 													where
 														list'= addToList [t1] i
-														list = addToList xs (snd (last list') + 1)
-addToList ((FuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToList xs'' (snd (last list') + 1))
+														list = addToList xs (getNew list)
+addToList ((FuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToList xs'' (getNew (list ++ list')))
 													where
 														list = addToList xs (i+1)
-														list'= addToList xs' (snd (last list) + 1)
+														list'= addToList xs' (getNew list)
 addToList ((FuncValNode t1 t2): xs) i 				= ((getValue t1), (i+1)): addToList xs (i+1)
 addToList ((PrintNode xs): xs'') i 					= addToList xs'' (i-1)
+addToList ((ReturnNode _ _): xs) i 					= addToList xs i
 addToList _ i 										= []
+
+getNew :: [(String, Int)] -> Int
+getNew [] 	= 1
+getNew list = (snd (last list)) + 1 
 
 getInt :: [(String, Int)] -> Tree -> Int
 getInt [] _ 							= 0

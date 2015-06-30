@@ -187,7 +187,7 @@ inScope list tree =
 		n@(IfNode t1 xs)			-> inScope list t1 && scopeM xs list
 		n@(IfElseNode t1 xs xs')	-> inScope list t1 && scopeM xs list && inScope list xs'
 		n@(WhileNode t1 xs)			-> inScope list t1 && scopeM xs list 
-		n@(FuncNode s xs xs')		-> scopeM2 list xs && funcM xs xs' list
+		n@(FuncNode s xs xs')		-> funcM xs xs' list
 		(DoFuncNode s xs)			-> scopeM2 list xs
 		n@(ElseNode xs)				-> scopeM xs list 
 		n@(ZupaNode s xs)			-> scopeM xs list  && usageM n n
@@ -220,36 +220,7 @@ getValue (FuncNode s _ _) = s
 getValue (DoubloonNode t1 t2) = "doubloon " ++ getValue t1 ++ " be " ++ getValue t2
 getValue (FuncValNode t1 t2) = getValue t1 ++ " " ++ getValue t2
 getValue (GiftNode t1) = "gift " ++ getValue t1
+getValue (DoFuncNode s xs) = s ++ "(" ++ (concat (map getValue xs)) ++ ")"
 
 allT = all (==True)
 anyT = any (==True)
-
--- ##################################################################################
-
-getKids :: Tree -> [Tree]
-getKids tree = case tree of
-	(PrintNode t1)			-> [t1]
-	(ReturnNode t1)			-> [t1]
-	(BootyNode t1 t2)		-> t1: [t2]
-	(DoubloonNode t1 t2)	-> t1: [t2]
-	(BoolNode t1 t2)		-> t1: [t2]
-	(AssignNode t1 t2)		-> t1: [t2]
-	(PlunderNode t1)		-> [t1]
-	(GiftNode t1)			-> [t1]
-	(OpNode _ t1 t2)		-> t1: [t2]
-	(IfNode b xs)			-> b:xs
-	(IfElseNode b xs _)		-> b:xs
-	(ElseNode xs)			-> xs
-	(WhileNode b xs)		-> b:xs
-	(ForNode t1 t2 t3 xs) 	-> (t1: t2: t3) ++ xs
-	(FuncNode _ xs xs')		-> xs ++ xs'
-	(ZupaNode _ xs) 		-> xs
-
-data ScopeState = START | NEXT
-
-
-scopeChecker :: Tree -> ScopeState -> [Tree] -> [[(String, Types)]] -> Bool
-scopeChecker tree state @c(x:xs) list =
-	case state of
-		START		-> scopeChecker tree NEXT (getKids tree) list
-		NEXT		| x ==  
