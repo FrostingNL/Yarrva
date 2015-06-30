@@ -7,7 +7,7 @@ import Debug.Trace
 import Data.List
 import FPPrac.Trees
 
-doPrint = True
+doPrint = False
 
 
 -- Embedded language for alphabet: the first 10 clauses should not be removed, the last three can be replaced by your own.
