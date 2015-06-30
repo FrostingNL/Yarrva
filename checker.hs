@@ -209,6 +209,8 @@ addAllToScope tree =
 		(FuncNode _ xs xs')  -> (addToScope xs) ++ (addToScope xs') ++ (concat (map addAllToScope xs'))
 		_					 -> []
 
+
+
 getValue :: Tree -> String
 getValue (VarNode s _ _) 	| s == "Aye" = "1"
 					   	| s == "Nay" = "0"
@@ -221,3 +223,33 @@ getValue (GiftNode t1) = "gift " ++ getValue t1
 
 allT = all (==True)
 anyT = any (==True)
+
+-- ##################################################################################
+
+getKids :: Tree -> [Tree]
+getKids tree = case tree of
+	(PrintNode t1)			-> [t1]
+	(ReturnNode t1)			-> [t1]
+	(BootyNode t1 t2)		-> t1: [t2]
+	(DoubloonNode t1 t2)	-> t1: [t2]
+	(BoolNode t1 t2)		-> t1: [t2]
+	(AssignNode t1 t2)		-> t1: [t2]
+	(PlunderNode t1)		-> [t1]
+	(GiftNode t1)			-> [t1]
+	(OpNode _ t1 t2)		-> t1: [t2]
+	(IfNode b xs)			-> b:xs
+	(IfElseNode b xs _)		-> b:xs
+	(ElseNode xs)			-> xs
+	(WhileNode b xs)		-> b:xs
+	(ForNode t1 t2 t3 xs) 	-> (t1: t2: t3) ++ xs
+	(FuncNode _ xs xs')		-> xs ++ xs'
+	(ZupaNode _ xs) 		-> xs
+
+data ScopeState = START | NEXT
+
+
+scopeChecker :: Tree -> ScopeState -> [Tree] -> [[(String, Types)]] -> Bool
+scopeChecker tree state @c(x:xs) list =
+	case state of
+		START		-> scopeChecker tree NEXT (getKids tree) list
+		NEXT		| x ==  

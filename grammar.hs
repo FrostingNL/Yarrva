@@ -20,7 +20,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
 				[Func, endmark],
 				[returnKey, Opt [Expr], NoCat endmark],															-- Return Expression
-				[functionKey, idf, lpar, FValues, rpar, Block],													-- Normal Function
+				[Function, idf, lpar, FValues, rpar, Block],													-- Normal Function
 				[mainKey, lpar, rpar, Block]]																	-- Main Function
 	Array   -> [[arrayKey, Type, idf, NoCat equalsKey, lbra, ArrayList, rbra, NoCat endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
@@ -54,6 +54,10 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Var 	-> [[intKey],
 				[boolKey],
 				[stringKey]]
+	Function-> [[intFunction], 
+				[boolFunction],
+				[strFunction],
+				[arrFunction]]
 
 data Types 	= Int
 			| Boo
@@ -65,6 +69,10 @@ data Types 	= Int
 
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
+intFunction = Keyword "doubloonShip"
+boolFunction= Keyword "orderShip"
+strFunction	= Keyword "bootyShip"
+arrFunction = Keyword "treasureShip"
 mainKey		= Keyword "flagship"
 returnKey 	= Keyword "avast"
 equalsKey 	= Keyword "be"	
@@ -375,7 +383,11 @@ allKeywords = [(progKey, "fleet"),
 				(decKey, "plunder"),
 				(endmark, ", Arrr!"),
 				(lequalsKey, "be below"),
-				(gequalsKey, "be above")
+				(gequalsKey, "be above"),
+				(intFunction, "doubloonShip"),
+				(boolFunction, "orderShip"),
+				(arrFunction, "treasureShip"),
+				(strFunction, "bootyShip")
 				]
 
 compareKeys :: [(Alphabet, String)]
@@ -422,18 +434,24 @@ helloWorld = unlines ["fleet HelloWorld {",
 					]
 
 sampleFunction = unlines ["fleet SampleFunction {",
+						 "   doubloon boob be 4, Arrr!",
+						 "   order boooob be Aye, Arrr!",
 						 "   ship add3(doubloon i) {",
 						 "      avast i + 3, Arrr!",
 						 "   }",
 						 "   ",
 						 "   flagship() {",
 						 "      doubloon a be add3(5), Arrr!",
-					--	 "      parrot a, Arrr!",
-					--	 "   }",
-					--	 "   navigate(doubloon a be 0. a be below 5. gift a) {",
-					--	 "       parley(a be 1 or a be 3) {",
-					--	 "            parrot (a), Arrr!",
-					--	 "       }",
+						 "      parrot a, Arrr!",
+						 "   }",
+						 "   navigate(doubloon a be 0. a be below 5. gift a) {",
+						 "       parley(a be 1) {",
+						 "           doubloon cups be 10, Arrr!",
+						 "           parley(5 be below cups) {",
+						 "                cups be 5, Arrr!",
+						 "           }",
+						 "           parrot (a), Arrr!",
+						 "       }",
 						 "   }",
 						 "}"
 						]
@@ -451,7 +469,7 @@ test2 = unlines ["fleet Program {",
 		]
 
 test3 = unlines ["fleet Fleet {",
-	"ship a(doubloon b, order c) {",
+	"doubloonShip a(doubloon b, order c) {",
 		"parrot b, Arrr!",
 		"parrot c, Arrr!",
 	"}",
@@ -462,7 +480,7 @@ test3 = unlines ["fleet Fleet {",
 tokens = tokenizer START 0 0
 
 test0 = parse grammar Program $ tokens test
-test1 = parse grammar Program $ tokens test2
+test1 = parse grammar Program $ tokens sampleFunction
 
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
