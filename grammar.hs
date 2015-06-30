@@ -465,6 +465,7 @@ test = unlines ["fleet Prog {",
 			   	"    }",
 			   	"    flagship() {",
 			   	"        doubloon b be a(1), Arrr!",
+			   	"        parrot b, Arrr!",
 			   	"    }",
 			   "}"
 			   ]

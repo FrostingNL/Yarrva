@@ -6,7 +6,7 @@ import Data.List
 import Debug.Trace
 import Grammar
 
-main = do putStr (show (typeAndScopeChecker $ convert test0))
+--main = do putStr (show (typeAndScopeChecker $ convert test0))
 
 typeAndScopeChecker :: Tree -> Bool
 typeAndScopeChecker node = typeChecker [] node && inScope [] node
@@ -31,7 +31,7 @@ checkUsage t@(s,p) tree =
 		(FuncValNode t1 t2)			-> usage t t1
 		(PrintNode t1)				-> usage t t1
 		(ReturnNode _ t1)			-> usage t t1
-		(DoFuncNode _ xs)			-> uMap t xs
+		(DoFuncNode s2 xs)			-> s == s2
 		(IfNode t1 xs) 				| usage t t1 || uMap t xs				-> True
 									| otherwise 							-> False
 		(IfElseNode t1 xs xs') 		| usage t t1 || uMap t xs || usage t xs'-> True
@@ -248,16 +248,16 @@ addAllToScope tree =
 		_					 -> []
 
 addToScopeSC :: [Tree] -> [(String, Types)]
-addToScopeSC [] _										= []
-addToScopeSC ((BootyNode (VarNode s l c) t): xs) 		= (s, Str): addToScope xs (li ++ [(s,Str)])
-addToScopeSC ((DoubloonNode (VarNode s l c) t): xs) 	= (s, Int): addToScope xs (li ++ [(s,Int)])
-addToScopeSC ((BoolNode (VarNode s l c) t): xs) li		= (s, Boo): addToScope xs (li ++ [(s,Boo)])
-addToScopeSC ((ArrayNode (VarNode s l c) t v): xs) li	= (s, Arr): addToScope xs (li ++ [(s,Arr)])
-addToScopeSC ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs) list
-														= (s, (getTypeFromString s2)): addToScope xs (list ++ [(s,(getTypeFromString s2))]) 
-addToScopeSC ((IntFuncNode s _ _): xs) l				= (s, Int): addToScope xs (l ++ [(s,Int)])
-addToScopeSC ((BoolFuncNode s _ _): xs) l				= (s, Boo): addToScope xs (l ++ [(s,Boo)])
-addToScopeSC (_: xs) l									= addToScope xs l
+addToScopeSC [] 										= []
+addToScopeSC ((BootyNode (VarNode s l c) t): xs) 		= (s, Str): addToScopeSC xs 
+addToScopeSC ((DoubloonNode (VarNode s l c) t): xs) 	= (s, Int): addToScopeSC xs 
+addToScopeSC ((BoolNode (VarNode s l c) t): xs)			= (s, Boo): addToScopeSC xs
+addToScopeSC ((ArrayNode (VarNode s l c) t v): xs) 		= (s, Arr): addToScopeSC xs
+addToScopeSC ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs)
+														= (s, (getTypeFromString s2)): addToScopeSC xs 
+addToScopeSC ((IntFuncNode s _ _): xs) 					= (s, Int): addToScopeSC xs 
+addToScopeSC ((BoolFuncNode s _ _): xs) 				= (s, Boo): addToScopeSC xs
+addToScopeSC (_: xs) 									= addToScopeSC xs 
 
 getValue :: Tree -> String
 getValue (VarNode s _ _) 	| s == "Aye" = "1"
