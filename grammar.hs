@@ -59,6 +59,7 @@ data Types 	= Int
 			| Boo
 			| Str
 			| Arr
+			| Fun
 			| Err
 			deriving (Eq,Show)
 
@@ -462,7 +463,7 @@ test3 = unlines ["fleet Fleet {",
 tokens = tokenizer START 0 0
 
 test0 = parse grammar Program $ tokens test
-test1 = parse grammar Program $ tokens test2
+test1 = parse grammar Program $ tokens test3
 
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
