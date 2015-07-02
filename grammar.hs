@@ -210,7 +210,7 @@ tokenizer state l c str@(x:xs) =
 						newC = c + length arrayType
 						rest = getRest xs
 					-- ARRAYELEM STATE
-		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c): tokenizer ARRAYELEM (c+1) l xs
+		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c): tokenizer ARRAYELEM l (c+1) xs
 					| isNumber x 					-> (Nmbr, num, l, c) 	   : tokenizer ARRAYELEM l (c + length num) (rmNum xs)
 					| isBoolean restW 			    -> (Bool, restW, l, c) 	   : tokenizer ARRAYELEM l (c + length restW) rest
 					| otherwise 					-> (String, string, l, c)  : tokenizer ARRAYELEM l (c + length string) rest
@@ -481,9 +481,10 @@ test = unlines ["fleet Prog {",
 			   ]
 
 test2 = unlines ["fleet Program {",	
-		"doubloon[] a be [1,3,5], Arrr!",
-		"doubloon c be a[1], Arrr!",
-		"}"
+		"flagship() {",
+			"doubloon[] a be [1,3,5], Arrr!",
+			"doubloon c be a[1], Arrr!",
+		"}}"
 		]
 
 test3 = unlines ["fleet Fleet {",
