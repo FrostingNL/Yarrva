@@ -121,7 +121,7 @@ colon   = Symbol ":"
 point	= Symbol "."
 comma	= Symbol ","
 
-data State = START | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM | ARRAYOP | ARRAYOP' | ARRAYOP''
+data State = START | START' | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM | ARRAYOP | ARRAYOP' | ARRAYOP''
 
 tokenizer :: State -> Int -> Int -> String -> [Token]
 tokenizer _ _ _ [] = []
@@ -130,8 +130,8 @@ tokenizer s l c ('\t':xs) 						= tokenizer s l 	(c+3) xs
 tokenizer s l c ('\n':xs)						= tokenizer s (l+1) 0 	  xs
 tokenizer s l c ('*':'*':xs) 					= tokenizer s l 	(c+2) (rmLineComment xs)
 tokenizer s l c ('>':'>':xs) 					= tokenizer s l 	(c+2) (rmBlockComment xs)
-tokenizer s l c ('b':'e':xs) 					| checkCompare xs = (getKeyword keyStr, keyStr, l, c) : tokenizer s l (c+8) (rmComp xs True)
-												| otherwise = (equalsKey, "be", l, c) : tokenizer s l (c+2) xs
+tokenizer s l c ('b':'e':x':xs) 				| checkCompare xs = (getKeyword keyStr, keyStr, l, c) : tokenizer s l (c+8) (rmComp xs True)
+												| x' == ' ' 	  = (equalsKey, "be", l, c) : tokenizer s l (c+2) xs
 												where 
 													keyStr = "be " ++ getCompare xs True
 tokenizer s l c (',':' ':'A':'r':'r':'r':'!':xs) 	= (endmark, getEndmark, l, c): tokenizer START l (c+7) xs
@@ -142,7 +142,7 @@ tokenizer state l c str@(x:xs) =
 		STRID 		-> (Idf, getWord str, l, c)     : tokenizer STR 		l (calcC c str) (getRest str)
 		ARRAY 		-> (arrayKey, "treasure", l, c) : tokenizer ARRAYTYPE 	l c str
 		ARRAYID 	-> (Idf, getWord str, l, c) 	: tokenizer ARRAYELEM 	l (calcC c str) (getRest str)
-		IDF         -> (Idf, getWord str, l, c) 	: tokenizer START 		l (calcC c str) (getRest str)
+		IDF         -> (Idf, getWord str, l, c) 	: tokenizer START' 		l (calcC c str) (getRest str)
 		ARRAYOP     -> (Idf, getIdf str, l, c) 		: tokenizer ARRAYOP' 	l (c + length (getIdf str)) (rmIdf xs)
 		ARRAYOP'	| x == '[' 						-> symbolToken : tokenizer ARRAYOP'' l (c+1) xs
 					| x == ']'						-> symbolToken : tokenizer START l (c+1) xs
@@ -163,6 +163,9 @@ tokenizer state l c str@(x:xs) =
 				 	| isArray str    				-> tokenizer ARRAY 	 l c str
 				 	| isArrayOp $ getWord str 		-> tokenizer ARRAYOP l c str
 				 	| otherwise 				    -> tokenizer IDF 	 l c str
+				 	-- ALTERNATIVE START STATE FOR IDF OP NUM
+		START'      | elem x "+-"					-> (Op, [x], l, c) :  tokenizer START l (c+1) xs
+					| otherwise						-> tokenizer START   l c str
 					-- SYM STATE
 		SYM 		| x == '-' && isNumber (head xs)-> tokenizer NUM 	 l c str
 					| elem x "+*/"	 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
@@ -485,6 +488,8 @@ test2 = unlines ["fleet Program {",
 				"    flagship() {",
 				"        doubloon n be 1, Arrr!",
 				"        doubloon x be (n-1), Arrr!",
+						"navigate(doubloon a be 0. a be above 5. gift a) {",
+						 "      }",
 				"}}"
 		]
 
