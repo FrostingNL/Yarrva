@@ -482,10 +482,10 @@ test = unlines ["fleet Prog {",
 			   ]
 
 test2 = unlines ["fleet Program {",	
-		"flagship() {",
-			"doubloon[] a be [1,3,5], Arrr!",
-			"doubloon c be a[1], Arrr!",
-		"}}"
+				"    flagship() {",
+				"        doubloon n be 1, Arrr!",
+				"        doubloon x be (n-1), Arrr!",
+				"}}"
 		]
 
 test3 = unlines ["fleet Fleet {",

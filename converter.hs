@@ -1,3 +1,5 @@
+module Converter where
+
 import Data.Char
 import FPPrac.Trees
 import Data.List
@@ -8,7 +10,7 @@ import Parse
 import Grammar
 import Checker
 
-main = start "Example programs/test.yarr"
+--main = start "Example programs/fib.yarr"
 
 start :: FilePath -> IO ()
 start input 

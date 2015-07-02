@@ -6,7 +6,7 @@ import Data.List
 import Debug.Trace
 import Grammar
 
-main = do putStr (show (typeAndScopeChecker $ convert test1))
+--main = do putStr (show (typeAndScopeChecker $ convert test1))
 
 {-
 	The Main function of this checker file. It calls typechecker and scopechecker on the specified Tree.

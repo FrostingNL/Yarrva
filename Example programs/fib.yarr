@@ -1,14 +1,17 @@
 fleet Fib {
-	ship fib(doubloon n) {
+	doubloonShip fib(doubloon n) {
 		parley(n be 1) {
 			avast 1, Arrr!
 		}
 		heave {
-			avast (fib(n-2) + fib(n-1)), Arrr!
+			doubloon x be n-1, Arrr!
+			doubloon n be fib(x), Arrr!
+			avast n, Arrr!
 		}
 	}
 
 	flagship() {
-		parrot(fib(5)), Arrr!
+		doubloon f be fib(5), Arrr!
+		parrot f, Arrr!
 	}
 }
