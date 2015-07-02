@@ -32,9 +32,9 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
 	Expr 	-> [[Alt [Expr2] [lpar, Expr2, rpar]]]
 	Expr2 	-> [[ArrayOp],	
-				[Type, Opt [SyntCat Op, Type]],																		-- An expression
+				[Type, Opt [SyntCat Op, Type]],																	-- An expression
 				[incKey, Type],																					-- Increase Type by 1
-				[decKey, Type]]																				-- One of the types
+				[decKey, Type]]																					-- One of the types
 	Op		-> [[plus],																							-- Self Explanatory
 				[minus],																						-- Self Explanatory
 				[times],																						-- Self Explanatory
@@ -164,7 +164,8 @@ tokenizer state l c str@(x:xs) =
 				 	| isArrayOp $ getWord str 		-> tokenizer ARRAYOP l c str
 				 	| otherwise 				    -> tokenizer IDF 	 l c str
 					-- SYM STATE
-		SYM 		| elem x "+-*/" 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
+		SYM 		| x == '-' && isNumber (head xs)-> tokenizer NUM 	 l c str
+					| elem x "+*/"	 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
 			   		| otherwise 					-> (getSymbol x, [x], l, c) : tokenizer START l (c+1) xs
 			   		-- BOOL STATE
 		BOOL 		| isBoolean bool 				-> (Bool, bool, l, c)    : tokenizer BOOL 		l (calcC c str) (getRest str)
@@ -172,10 +173,12 @@ tokenizer state l c str@(x:xs) =
 				    where
 				    	bool = getWord str
 			   		-- NUM STATE
-		NUM 		| isNumber x 					-> (Nmbr, getNum str, l, c) : tokenizer START l newC rest 
+		NUM 		| isNumber x 					-> (Nmbr, num, l, c) : tokenizer START l newC rest 
+					| x == '-' && isNumber (head xs)-> (Nmbr, '-' : num, l, c) : tokenizer START l newC rest
 					| otherwise 					-> tokenizer IDF l c str
 					where
-						newC = c + length (getNum str)
+						num = getNum str
+						newC = c + length num
 						rest = rmNum str
 					-- STR STATE
 		STR 		| isString (getString str) 		-> (String, getString str, l, c) : tokenizer START l newC rest
@@ -253,7 +256,8 @@ rmBlockComment (_:xs) = rmBlockComment xs
 
 rmNum :: String -> String
 rmNum [] = []
-rmNum (x:xs) | isNumber x = rmNum xs
+rmNum (x:xs) | x == '-' = rmNum xs
+			 | isNumber x = rmNum xs
 			 | otherwise = (x:xs)
 
 isArray :: String -> Bool
@@ -323,6 +327,7 @@ isBoolean word
 getNum :: String -> String
 getNum [] = []
 getNum (x:xs)
+ 	| x == '-' = getNum xs	
 	| not (isNumber x) = []
 	| otherwise = x : getNum xs
 
@@ -482,15 +487,15 @@ test2 = unlines ["fleet Program {",
 		]
 
 test3 = unlines ["fleet Fleet {",
-		"doubloon f be 5, Arrr!",
+		"doubloon f be -5, Arrr!",
 		"doubloon h be 7, Arrr!",
 		"order u be 8, Arrr!",
 --		"doubloonShip a(doubloon b, order c) {",
 --			"doubloon x be b, Arrr!",
 --		"}",
-		"orderShip a(doubloon e, order d) {",
-			"order y be d, Arrr!",
-		"}",
+--		"orderShip a(doubloon e, order d) {",
+--			"order y be d, Arrr!",
+--		"}",
 		"flagship() {",
 			"a(4,Aye), Arrr!",
 		"}",
