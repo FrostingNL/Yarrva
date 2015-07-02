@@ -51,13 +51,8 @@ toSprockell list tree =
 								spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegC RegA,\n" ++
 								spacing ++ "Push RegA,\n"
 
-		(PrintNode t1) 		->	spacing ++ "-- parrot (" ++ (getValue t1) ++ ")\n" ++
-								spacing ++ pNode list t1 ++ " RegA,\n" ++
-								spacing ++ "Const (ord '0') RegB,\n" ++ 
-								spacing ++ "Compute Add RegA RegB RegB,\n" ++
-       							spacing ++ "Write RegB stdio,\n" ++
-       							spacing ++ "Read (Addr 0x0),\n" ++
-       							spacing ++ "Receive RegB,\n"
+		(PrintNode t1) 		->	spacing ++ "-- parrot (" ++ (getValue t1) ++ ")\n" ++ 
+								(concat $ map (printFunc list) (getValue t1))
 
 		(ZupaNode s xs)		-> 	"import Sprockell.System\n\nprog = [\n" ++ 
 								(concat (map (toSprockell (addToList xs 0)) xs)) ++ 
@@ -143,6 +138,14 @@ toSprockell list tree =
 												spacing ++ "Jump (Ind RegA),\n"
 
 		_					-> 	""
+
+printFunc :: [(String, Int)] -> Char -> String
+printFunc list c =	spacing ++ "Const (ord '" ++ [c] ++ "') RegA,\n" ++
+					spacing ++ "Const (ord '0') RegB,\n" ++ 
+					spacing ++ "Compute Add RegA RegB RegB,\n" ++
+   					spacing ++ "Write RegB stdio,\n" ++
+   					spacing ++ "Read (Addr 0x0),\n" ++
+   					spacing ++ "Receive RegB,\n"
 
 storeArray :: Tree -> [Tree] -> [(String, Int)] -> String
 storeArray idf (x:xs) list 	= spacing ++ pNode list x

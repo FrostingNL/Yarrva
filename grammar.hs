@@ -488,19 +488,10 @@ test2 = unlines ["fleet Program {",
 		]
 
 test3 = unlines ["fleet Fleet {",
-		"doubloon f be -5, Arrr!",
-		"doubloon h be 7, Arrr!",
-		"order u be 8, Arrr!",
---		"doubloonShip a(doubloon b, order c) {",
---			"doubloon x be b, Arrr!",
---		"}",
---		"orderShip a(doubloon e, order d) {",
---			"order y be d, Arrr!",
---		"}",
-		"flagship() {",
-			"a(4,Aye), Arrr!",
-		"}",
-      "}"]
+	"flagship() {",
+		"parrot 10, Arrr!",
+	"}",
+	"}"]
 
 tokens = tokenizer START 0 0
 

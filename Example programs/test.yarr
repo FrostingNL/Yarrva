@@ -1,20 +1,5 @@
 fleet Fleet {
-	doubloonShip a(doubloon i) {
-		i be i+1, Arrr!
-		avast i, Arrr!
-	}
-
-	doubloonShip b(doubloon i) {
-		parrot i, Arrr!
-		parrot a(i), Arrr!
-		i be i+a(i), Arrr!
-		parrot i, Arrr!
-		avast i, Arrr!
-	}
-
 	flagship() {
-		doubloon tet be -1, Arrr!
-		parrot b(tet), Arrr!
-		parrot tet, Arrr!
+		parrot 10, Arrr!
 	}
 }
