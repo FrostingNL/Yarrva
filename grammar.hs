@@ -23,7 +23,9 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[Function, idf, lpar, FValues, rpar, Block]]													-- Normal Function
 	Array   -> [[arrayKey, Type, idf, NoCat equalsKey, lbra, ArrayList, rbra, NoCat endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
-	PBlock	-> [[lcbr, Rep0 [Function, idf, lpar, FValues, rpar, Block], MainFunc, rcbr]] 
+	PBlock	-> [[lcbr, Rep0 [GlobalVars], Rep0 [FuncBlock], MainFunc, rcbr]] 
+	GlobalVars->[[Var, idf, NoCat equalsKey, Expr, NoCat endmark]]
+	FuncBlock->[[Function, idf, lpar, FValues, rpar, Block]]
 	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [Alt [lesserKey] [lequalsKey]] [Alt [greaterKey] [gequalsKey]]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
@@ -480,8 +482,14 @@ test2 = unlines ["fleet Program {",
 		]
 
 test3 = unlines ["fleet Fleet {",
-		"doubloonShip a(doubloon b, order c) {",
-			"doubloon c be b, Arrr!",
+		"doubloon f be 5, Arrr!",
+		"doubloon h be 7, Arrr!",
+		"order u be 8, Arrr!",
+--		"doubloonShip a(doubloon b, order c) {",
+--			"doubloon x be b, Arrr!",
+--		"}",
+		"orderShip a(doubloon e, order d) {",
+			"order y be d, Arrr!",
 		"}",
 		"flagship() {",
 			"a(4,Aye), Arrr!",

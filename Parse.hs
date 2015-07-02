@@ -50,6 +50,9 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| Function
 		| PBlock
 		| MainFunc
+		| FuncBlock
+		| GlobalVars
+		| VarDecl
 
 		deriving (Eq,Show)
 
