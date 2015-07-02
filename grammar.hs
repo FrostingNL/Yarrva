@@ -62,7 +62,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 data Types 	= Int
 			| Boo
 			| Str
-			| Arr
+			| Arr Types
 			| Fun
 			| Err
 			deriving (Eq,Show)
@@ -257,6 +257,7 @@ isArray :: String -> Bool
 isArray str = elem (getArrayType str) allTypes && contains str '[' && contains str ']'
 
 getArrayType :: String -> String
+getArrayType [] = ""
 getArrayType (x:xs) 
 	| x /= '[' = x : getArrayType xs
 	| otherwise = []
@@ -472,7 +473,7 @@ test = unlines ["fleet Prog {",
 
 test2 = unlines ["fleet Program {",	
 		"doubloon[] a be [1,3,5], Arrr!",
-		"doubloon c be a[1], Arrr!",
+		"doubloon c be a[2], Arrr!",
 		"}"
 		]
 
@@ -484,7 +485,7 @@ test3 = unlines ["fleet Fleet {",
 tokens = tokenizer START 0 0
 
 test0 = parse grammar Program $ tokens test
-test1 = parse grammar Program $ tokens test3
+test1 = parse grammar Program $ tokens test2
 
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
