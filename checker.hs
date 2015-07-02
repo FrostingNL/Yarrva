@@ -172,6 +172,7 @@ getTreeType _ list 			 			= Err
 
 inScope :: [[(String, Types)]] -> Tree -> Bool
 inScope ([]:x:list) a 							= inScope (x:list) a
+inScope [[]] (VarNode s _ _)					= isString s || isNumber (head s) || (head s) == '-' || isBoolean s
 inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumber (head s) || (head s) == '-' || isBoolean s	= True
 												| otherwise = inScope (tup:list) n
 inScope (((s2,_):tup):list) n@(DoFuncNode s _) 	| s == s2 = True
@@ -227,7 +228,7 @@ inScope list tree =
 		n@(ElseNode xs)				-> scopeM xs list 
 		n@(ZupaNode s xs)			-> scopeM xs list  && usageM n n
 		n@(IntFuncNode s xs xs')	-> funcM xs xs' list
-		_							-> False
+		n							-> trace (show n) $ False
 usageM a b	= allT (map (doUsage a) (addAllToScope b))
 scopeM a b 	= scopeM2 ((addToScopeSC a): b) (getOtherNodes a)
 funcM a b c = scopeM2 (((addToScopeSC a) ++ (addToScopeSC b)): c) b
