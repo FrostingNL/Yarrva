@@ -48,6 +48,11 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| ArrayOp
 		| ArrayIndex
 		| Function
+		| PBlock
+		| MainFunc
+		| FuncBlock
+		| GlobalVars
+		| VarDecl
 
 		deriving (Eq,Show)
 

@@ -9,7 +9,7 @@ import System.IO
 
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
-	Program -> [[progKey, idf, Block]]																			-- The Main Program
+	Program -> [[progKey, idf, PBlock]]																			-- The Main Program
 	Stat 	-> [[Opt [Var], idf, NoCat equalsKey, Expr, NoCat endmark], 										-- Var declaration
 				[Array],
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt [elseKey, Block]],									-- IfElse Expression
@@ -20,19 +20,21 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
 				[Func, endmark],
 				[returnKey, Opt [Expr], NoCat endmark],															-- Return Expression
-				[Function, idf, lpar, FValues, rpar, Block],													-- Normal Function
-				[mainKey, lpar, rpar, Block]]																	-- Main Function
+				[Function, idf, lpar, FValues, rpar, Block]]													-- Normal Function
 	Array   -> [[arrayKey, Type, idf, NoCat equalsKey, lbra, ArrayList, rbra, NoCat endmark]]
 	Block	-> [[lcbr, Rep0 [Stat], rcbr]]																		-- A block of code
+	PBlock	-> [[lcbr, Rep0 [GlobalVars], Rep0 [FuncBlock], MainFunc, rcbr]] 
+	GlobalVars->[[Var, idf, NoCat equalsKey, Expr, NoCat endmark]]
+	FuncBlock->[[Function, idf, lpar, FValues, rpar, Block]]
 	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [Alt [lesserKey] [lequalsKey]] [Alt [greaterKey] [gequalsKey]]], Expr],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
 				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
 	Expr 	-> [[Alt [Expr2] [lpar, Expr2, rpar]]]
 	Expr2 	-> [[ArrayOp],	
-				[Type, Opt [SyntCat Op, Type]],																		-- An expression
+				[Type, Opt [SyntCat Op, Type]],																	-- An expression
 				[incKey, Type],																					-- Increase Type by 1
-				[decKey, Type]]																				-- One of the types
+				[decKey, Type]]																					-- One of the types
 	Op		-> [[plus],																							-- Self Explanatory
 				[minus],																						-- Self Explanatory
 				[times],																						-- Self Explanatory
@@ -58,6 +60,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[boolFunction],
 				[strFunction],
 				[arrFunction]]
+	MainFunc-> [[mainKey, lpar, rpar, Block]]
 
 data Types 	= Int
 			| Boo
@@ -161,7 +164,8 @@ tokenizer state l c str@(x:xs) =
 				 	| isArrayOp $ getWord str 		-> tokenizer ARRAYOP l c str
 				 	| otherwise 				    -> tokenizer IDF 	 l c str
 					-- SYM STATE
-		SYM 		| elem x "+-*/" 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
+		SYM 		| x == '-' && isNumber (head xs)-> tokenizer NUM 	 l c str
+					| elem x "+*/"	 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
 			   		| otherwise 					-> (getSymbol x, [x], l, c) : tokenizer START l (c+1) xs
 			   		-- BOOL STATE
 		BOOL 		| isBoolean bool 				-> (Bool, bool, l, c)    : tokenizer BOOL 		l (calcC c str) (getRest str)
@@ -169,10 +173,12 @@ tokenizer state l c str@(x:xs) =
 				    where
 				    	bool = getWord str
 			   		-- NUM STATE
-		NUM 		| isNumber x 					-> (Nmbr, getNum str, l, c) : tokenizer START l newC rest 
+		NUM 		| isNumber x 					-> (Nmbr, num, l, c) : tokenizer START l newC rest 
+					| x == '-' && isNumber (head xs)-> (Nmbr, '-' : num, l, c) : tokenizer START l newC rest
 					| otherwise 					-> tokenizer IDF l c str
 					where
-						newC = c + length (getNum str)
+						num = getNum str
+						newC = c + length num
 						rest = rmNum str
 					-- STR STATE
 		STR 		| isString (getString str) 		-> (String, getString str, l, c) : tokenizer START l newC rest
@@ -204,7 +210,7 @@ tokenizer state l c str@(x:xs) =
 						newC = c + length arrayType
 						rest = getRest xs
 					-- ARRAYELEM STATE
-		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c): tokenizer ARRAYELEM (c+1) l xs
+		ARRAYELEM   | isGramSymbol x 				-> (getSymbol x, [x], l, c): tokenizer ARRAYELEM l (c+1) xs
 					| isNumber x 					-> (Nmbr, num, l, c) 	   : tokenizer ARRAYELEM l (c + length num) (rmNum xs)
 					| isBoolean restW 			    -> (Bool, restW, l, c) 	   : tokenizer ARRAYELEM l (c + length restW) rest
 					| otherwise 					-> (String, string, l, c)  : tokenizer ARRAYELEM l (c + length string) rest
@@ -250,7 +256,8 @@ rmBlockComment (_:xs) = rmBlockComment xs
 
 rmNum :: String -> String
 rmNum [] = []
-rmNum (x:xs) | isNumber x = rmNum xs
+rmNum (x:xs) | x == '-' = rmNum xs
+			 | isNumber x = rmNum xs
 			 | otherwise = (x:xs)
 
 isArray :: String -> Bool
@@ -321,6 +328,7 @@ isBoolean word
 getNum :: String -> String
 getNum [] = []
 getNum (x:xs)
+ 	| x == '-' = getNum xs	
 	| not (isNumber x) = []
 	| otherwise = x : getNum xs
 
@@ -436,24 +444,26 @@ helloWorld = unlines ["fleet HelloWorld {",
 					]
 
 sampleFunction = unlines ["fleet SampleFunction {",
-						 "   doubloon boob be 4, Arrr!",
-						 "   order boooob be Aye, Arrr!",
-						 "   ship add3(doubloon i) {",
+						 "   doubloonShip add3(doubloon i) {",
 						 "      avast i + 3, Arrr!",
 						 "   }",
-						 "   ",
+						 "   doubloonShip add5(doubloon i) {",
+						 "      avast i + 5, Arrr!",
+						 "   }",
 						 "   flagship() {",
+						 "      doubloon boob be 4, Arrr!",
+						 "      order boooob be Aye, Arrr!",
 						 "      doubloon a be add3(5), Arrr!",
 						 "      parrot a, Arrr!",
-						 "   }",
-						 "   navigate(doubloon a be 0. a be below 5. gift a) {",
-						 "       parley(a be 1) {",
-						 "           doubloon cups be 10, Arrr!",
-						 "           parley(5 be below cups) {",
-						 "                cups be 5, Arrr!",
-						 "           }",
-						 "           parrot (a), Arrr!",
-						 "       }",
+						 "      navigate(doubloon a be 0. a be below 5. gift a) {",
+						 "         parley(a be 1) {",
+						 "            doubloon cups be 10, Arrr!",
+						 "            parley(5 be below cups) {",
+						 "                 cups be 5, Arrr!",
+						 "            }",
+						 "            parrot (a), Arrr!",
+						 "         }",
+						 "      }",
 						 "   }",
 						 "}"
 						]
@@ -472,15 +482,17 @@ test = unlines ["fleet Prog {",
 			   ]
 
 test2 = unlines ["fleet Program {",	
-		"doubloon[] a be [1,3,5], Arrr!",
-		"doubloon c be a[2], Arrr!",
-		"}"
+		"flagship() {",
+			"doubloon[] a be [1,3,5], Arrr!",
+			"doubloon c be a[1], Arrr!",
+		"}}"
 		]
 
 test3 = unlines ["fleet Fleet {",
-	"doubloonShip a(doubloon b, order c) {",
+	"flagship() {",
+		"parrot 10, Arrr!",
 	"}",
-      "}"]
+	"}"]
 
 tokens = tokenizer START 0 0
 
@@ -530,12 +542,12 @@ convert tree = case tree of
 	(PNode _ ((PLeaf (Keyword "whirlpool", s, _, _)): x: (PNode Block xs): []))										-> WhileNode 	(convert x) (map convert xs)
 	(PNode _ ((PLeaf (Keyword "treasure", _,_, _)):x:x':(PNode ArrayList vals):[])) 								-> ArrayNode 	(convert x) (convert x') (map convert vals)
 	(PNode _ ((PLeaf (Keyword "navigate", s, _, _)): x: x': x'': (PNode Block xs): []))								-> ForNode 		(convert x) (convert x') (convert x'') (map convert xs)
-	(PNode _ ((PNode _ [PLeaf (k, _, _, _)]): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) 	| k == intFunction	-> IntFuncNode s 	(map convert xs') (map convert xs)
+	(PNode _ ((PNode _ [PLeaf (k, _, _, _)]): (PLeaf (Idf, s, _, _)): (PNode FValues xs'):(PNode Block xs): [])) 	| k == intFunction	-> trace (show xs) $	 IntFuncNode s 	(map convert xs') (map convert xs)
 																													| k == boolFunction	-> BoolFuncNode s 	(map convert xs') (map convert xs)
 																													| k == strFunction	-> StrFuncNode s 	(map convert xs') (map convert xs)
 																													| otherwise		  	-> ArrFuncNode s 	(map convert xs') (map convert xs)
 	(PNode _ ((PLeaf (Keyword "heave", s, _, _)): (PNode Block xs): []))											-> ElseNode  	(map convert xs)
-	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode Block xs):[]))														-> ZupaNode s 	(map convert xs)
+	(PNode Program (x:(PLeaf (a,s, _, _)):(PNode PBlock xs):[]))													-> ZupaNode s 	(map convert xs)
 	(PNode _ ((PNode Func ((PLeaf (Idf, s, _, _)): xs)):_))															-> DoFuncNode s (map convert xs)
 	(PNode _ ((PLeaf (Keyword "flagship", s, _, _)): (PNode Block xs): []))											-> FuncNode s [] (map convert xs)
 	(PNode _ ((PNode _ [PLeaf (Keyword "doubloon", "doubloon", _, _)]): x:[]))										-> FuncValNode 	(convert x) (VarNode "Int" 0 0)
@@ -550,6 +562,7 @@ convert tree = case tree of
 	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ ((PNode Bool [x]): []))																				-> BoolExNode $ Boolean (convert x)
 	(PNode _ [node])																								-> convert node
+	s -> error ("ERROR: " ++ (show s))
 
 data Tree = VarNode 	String Int Int
 		  | BootyNode 	Tree Tree

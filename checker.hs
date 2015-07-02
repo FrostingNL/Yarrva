@@ -235,7 +235,8 @@ getTreeType _ list 			 			= Err
 
 inScope :: [[(String, Types)]] -> Tree -> Bool
 inScope ([]:x:list) a 							= inScope (x:list) a
-inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumber (head s) || isBoolean s	= True
+inScope [[]] (VarNode s _ _)					= isString s || isNumber (head s) || (head s) == '-' || isBoolean s
+inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumber (head s) || (head s) == '-' || isBoolean s	= True
 												| otherwise = inScope (tup:list) n
 inScope (((s2,_):tup):list) n@(DoFuncNode s _) 	| s == s2 = True
 												| otherwise = inScope (tup:list) n

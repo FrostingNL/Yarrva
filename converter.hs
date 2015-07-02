@@ -30,7 +30,7 @@ start input
 toSprockell :: [(String, Int)] -> Tree -> String
 toSprockell list tree = 
 	case tree of
-		(DoubloonNode t1 t2)-> 	trace (show list) $ spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
+		(DoubloonNode t1 t2)-> 	spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 		
@@ -46,18 +46,13 @@ toSprockell list tree =
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
  
 		(OpNode s t1 t2)	->	(getValue t1) ++ " " ++ s ++ " " ++ (getValue t2) ++ "\n" ++
-								spacing ++ pNode list t1 ++ " RegA,\n" ++
-								spacing ++ pNode list t2 ++ " RegB,\n" ++
-								spacing ++ "Compute " ++ (getOp s True) ++ " RegA RegB RegA,\n" ++
+								spacing ++ pNode list t1 ++ " RegB,\n" ++
+								spacing ++ pNode list t2 ++ " RegC,\n" ++
+								spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegC RegA,\n" ++
 								spacing ++ "Push RegA,\n"
 
-		(PrintNode t1) 		->	spacing ++ "-- parrot (" ++ (getValue t1) ++ ")\n" ++
-								spacing ++ pNode list t1 ++ " RegA,\n" ++
-								spacing ++ "Const (ord '0') RegB,\n" ++ 
-								spacing ++ "Compute Add RegA RegB RegB,\n" ++
-       							spacing ++ "Write RegB stdio,\n" ++
-       							spacing ++ "Read (Addr 0x0),\n" ++
-       							spacing ++ "Receive RegB,\n"
+		(PrintNode t1) 		->	spacing ++ "-- parrot (" ++ (getValue t1) ++ ")\n" ++ 
+								(concat $ map (printFunc list) (getValue t1))
 
 		(ZupaNode s xs)		-> 	"import Sprockell.System\n\nprog = [\n" ++ 
 								(concat (map (toSprockell (addToList xs 0)) xs)) ++ 
@@ -144,6 +139,14 @@ toSprockell list tree =
 
 		_					-> 	""
 
+printFunc :: [(String, Int)] -> Char -> String
+printFunc list c =	spacing ++ "Const (ord '" ++ [c] ++ "') RegA,\n" ++
+					spacing ++ "Const (ord '0') RegB,\n" ++ 
+					spacing ++ "Compute Add RegA RegB RegB,\n" ++
+   					spacing ++ "Write RegB stdio,\n" ++
+   					spacing ++ "Read (Addr 0x0),\n" ++
+   					spacing ++ "Receive RegB,\n"
+
 storeArray :: Tree -> [Tree] -> [(String, Int)] -> String
 storeArray idf (x:xs) list 	= spacing ++ pNode list x
 
@@ -153,7 +156,7 @@ funcText (x:xs) = (getValue x) ++ ", " ++ funcText xs
 
 pushFunc :: [(String, Int)] -> [Tree] -> String
 pushFunc list []  	 =  "" 
-pushFunc list (x:xs) = 	spacing ++ pNode list x ++ " RegA,\n" ++ 
+pushFunc list (x:xs) = 	spacing ++ "Const " ++ (show (getInt list x)) ++ " RegA,\n" ++ 
 						spacing ++ "Push RegA,\n" ++
 						pushFunc list xs
 
@@ -161,7 +164,8 @@ popFunc :: [(String, Int)] -> [Tree] -> String
 popFunc list []  	= "" 
 popFunc list (n:xs) = popFunc list xs ++
 					  spacing ++ "Pop RegA,\n" ++
-					  spacing ++ "Store RegA (Addr " ++ (show (getInt list n)) ++ "),\n"
+					  spacing ++ "Load (Deref RegA) RegB,\n" ++ 
+					  spacing ++ "Store RegB (Addr " ++ (show (getInt list n)) ++ "),\n"
 
 calcLen :: [Tree] -> Int
 calcLen ((DoubloonNode (VarNode _ _ _) (VarNode _ _ _)):xs)	= 2 + calcLen xs
@@ -180,7 +184,7 @@ calcLen ((GiftNode t1): xs)									= 4 + calcLen xs
 calcLen ((PrintNode (VarNode _ _ _)): xs)					= 6 + calcLen xs
 calcLen ((PrintNode t1): xs)								= 6 + calcLen [t1] + calcLen xs
 calcLen ((IntFuncNode _ t1 t2): xs)							= 7 + calcLen t1 + calcLen t2 + calcLen xs
-calcLen ((FuncValNode t1 t2): xs) 							= 2 + calcLen xs
+calcLen ((FuncValNode t1 t2): xs) 							= 3 + calcLen xs
 calcLen ((DoFuncNode _ xs): xs')							= 5 + calcLen xs + calcLen xs'
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
 calcLen ((ReturnNode _ _): xs)								= 4 + calcLen xs
@@ -200,7 +204,7 @@ boolEx (Boolean t1) list	= spacing ++ pNode list t1 ++ " RegA,\n" ++
 
 printNode :: [(String, Int)] -> Tree -> String
 printNode list t@(VarNode _ _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
-printNode list t 				= toSprockell list t ++ spacing ++ "Pop "
+printNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
 pNode :: [(String, Int)] -> Tree -> String
 pNode list t@(VarNode _ _ _)	= load list t
@@ -208,7 +212,7 @@ pNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
 load :: [(String, Int)] -> Tree -> String
 load list t | getInt list t /= 0 	= "Load (Addr " ++ (show (getInt list t)) ++ ")"
-			| otherwise				= "Const " ++ (getValue t)
+			| otherwise				= "Const (" ++ (getValue t) ++ ")"
 
 getOp :: String -> Bool -> String
 getOp "+" _ = "Add"
