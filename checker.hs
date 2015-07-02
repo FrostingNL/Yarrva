@@ -172,7 +172,7 @@ getTreeType _ list 			 			= Err
 
 inScope :: [[(String, Types)]] -> Tree -> Bool
 inScope ([]:x:list) a 							= inScope (x:list) a
-inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumber (head s) || isBoolean s	= True
+inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumber (head s) || (head s) == '-' || isBoolean s	= True
 												| otherwise = inScope (tup:list) n
 inScope (((s2,_):tup):list) n@(DoFuncNode s _) 	| s == s2 = True
 												| otherwise = inScope (tup:list) n
@@ -261,8 +261,8 @@ addToScopeSC (_: xs) 									= addToScopeSC xs
 
 getValue :: Tree -> String
 getValue (VarNode s _ _) 	| s == "Aye" = "1"
-					   	| s == "Nay" = "0"
-						| otherwise	= s
+					   		| s == "Nay" = "0"
+							| otherwise	= s
 getValue (OpNode s _ _) = s
 getValue (FuncNode s _ _) = s
 getValue (DoubloonNode t1 t2) = "doubloon " ++ getValue t1 ++ " be " ++ getValue t2
