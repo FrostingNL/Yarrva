@@ -11,7 +11,7 @@ prog = [
        Store RegB (Addr 2),
        -- i be i + 1
        Load (Addr 2) RegB,
-       Const 1 RegC,
+       Const (1) RegC,
        Compute Add RegB RegC RegA,
        Push RegA,
        Pop  RegA,
@@ -83,8 +83,8 @@ prog = [
        Pop RegE,
        Jump (Ind RegE),
        -- flagship()
-       -- doubloon tet be 1
-       Const 1 RegA,
+       -- doubloon tet be -1
+       Const (-1) RegA,
        Store RegA (Addr 2),
        -- parrot (b(tet))
               -- b(tet)

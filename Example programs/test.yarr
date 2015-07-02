@@ -13,7 +13,7 @@ fleet Fleet {
 	}
 
 	flagship() {
-		doubloon tet be 1, Arrr!
+		doubloon tet be -1, Arrr!
 		parrot b(tet), Arrr!
 		parrot tet, Arrr!
 	}

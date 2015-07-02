@@ -201,7 +201,7 @@ boolEx (Boolean t1) list	= spacing ++ pNode list t1 ++ " RegA,\n" ++
 
 printNode :: [(String, Int)] -> Tree -> String
 printNode list t@(VarNode _ _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
-printNode list t 				= toSprockell list t ++ spacing ++ "Pop "
+printNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
 pNode :: [(String, Int)] -> Tree -> String
 pNode list t@(VarNode _ _ _)	= load list t
@@ -209,7 +209,7 @@ pNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
 load :: [(String, Int)] -> Tree -> String
 load list t | getInt list t /= 0 	= "Load (Addr " ++ (show (getInt list t)) ++ ")"
-			| otherwise				= "Const " ++ (getValue t)
+			| otherwise				= "Const (" ++ (getValue t) ++ ")"
 
 getOp :: String -> Bool -> String
 getOp "+" _ = "Add"
