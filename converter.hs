@@ -17,7 +17,7 @@ start input
 		contents <- hGetContents inHandle
 		putStrLn (contents)
 		outHandle <- openFile "out.hs" WriteMode
-		if True --typeAndScopeChecker $ convert $ parse grammar Program $ tokens contents
+		if typeAndScopeChecker $ convert $ parse grammar Program $ tokens contents
 			then do 
 				hPutStr outHandle $ toSprockell [] $ convert $ parse grammar Program $ tokens contents
 				hClose inHandle
@@ -30,7 +30,7 @@ start input
 toSprockell :: [(String, Int)] -> Tree -> String
 toSprockell list tree = 
 	case tree of
-		(DoubloonNode t1 t2)-> 	spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
+		(DoubloonNode t1 t2)-> 	trace (show list) $ spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 		
@@ -39,7 +39,7 @@ toSprockell list tree =
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 
 		(ArrayNode t1 t2 xs)->  spacing ++ "-- " ++ (getValue t1) ++ "[] " ++ (getValue t2) ++ " be [" ++ funcText xs ++ "]\n" ++ 
-								storeArray t2 xs
+								storeArray t2 xs list
 
 		(AssignNode t1 t2) 	-> 	spacing ++ "-- " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++
@@ -124,7 +124,7 @@ toSprockell list tree =
 		n@(FuncNode "flagship" xs xs')		-> 	spacing ++ "-- flagship()\n" ++
 												(concat (map (toSprockell list) xs'))
 
-		n@(FuncNode s xs xs')				->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+		n@(IntFuncNode s xs xs')			->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const 3 RegA,\n" ++
 												spacing ++ "Compute Add PC RegA RegE,\n" ++ 
 												spacing ++ "Store RegE (Addr " ++ (show (getInt list n)) ++ "),\n" ++ 
@@ -144,7 +144,7 @@ toSprockell list tree =
 
 		_					-> 	""
 
-storeArray :: Tree -> [Tree] ->  -> String
+storeArray :: Tree -> [Tree] -> [(String, Int)] -> String
 storeArray idf (x:xs) list 	= spacing ++ pNode list x
 
 funcText :: [Tree] -> String
@@ -160,7 +160,7 @@ pushFunc list (x:xs) = 	spacing ++ pNode list x ++ " RegA,\n" ++
 popFunc :: [(String, Int)] -> [Tree] -> String
 popFunc list []  	= "" 
 popFunc list (n:xs) = popFunc list xs ++
-						spacing ++ "Pop RegA,\n" ++
+					  spacing ++ "Pop RegA,\n" ++
 					  spacing ++ "Store RegA (Addr " ++ (show (getInt list n)) ++ "),\n"
 
 calcLen :: [Tree] -> Int
@@ -170,15 +170,18 @@ calcLen ((BoolNode (VarNode _ _ _) (VarNode _ _ _)):xs) 	= 2 + calcLen xs
 calcLen ((AssignNode (VarNode _ _ _) (VarNode _ _ _)):xs) 	= 2 + calcLen xs
 calcLen ((AssignNode (VarNode _ _ _) xs):xs')				= 2 + calcLen [xs] + calcLen xs'
 calcLen ((OpNode _ (VarNode _ _ _) (VarNode _ _ _)):xs) 	= 4 + calcLen xs 
+calcLen ((OpNode _ (VarNode _ _ _) xs):xs') 				= 4 + calcLen [xs] + calcLen xs' 
 calcLen ((IfNode _ xs):xs')									= 4 + calcLen xs + calcLen xs'
 calcLen ((IfElseNode _ xs t1):xs')							= 4 + calcLen xs + calcLen [t1] + calcLen xs'
 calcLen ((WhileNode t1 xs): xs')							= 9 + calcLen xs + calcLen xs'
 calcLen ((ForNode t1 t2 t3 xs): xs')						= 10 + calcLen [t1] + calcLen [t2] + calcLen [t3] + calcLen xs + calcLen xs'
 calcLen ((ElseNode xs): xs')								= 1 + calcLen xs + calcLen xs'
 calcLen ((GiftNode t1): xs)									= 4 + calcLen xs
-calcLen ((PrintNode t1): xs)								= 6 + calcLen xs
-calcLen ((FuncNode s t1 t2): xs)							= 7 + calcLen t1 + calcLen t2 + calcLen xs
+calcLen ((PrintNode (VarNode _ _ _)): xs)					= 6 + calcLen xs
+calcLen ((PrintNode t1): xs)								= 6 + calcLen [t1] + calcLen xs
+calcLen ((IntFuncNode _ t1 t2): xs)							= 7 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((FuncValNode t1 t2): xs) 							= 2 + calcLen xs
+calcLen ((DoFuncNode _ xs): xs')							= 5 + calcLen xs + calcLen xs'
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
 calcLen ((ReturnNode _ _): xs)								= 4 + calcLen xs
 calcLen _													= 0
@@ -250,6 +253,10 @@ addToList ((FuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToL
 													where
 														list = addToList xs (i+1)
 														list'= addToList xs' (getNew list)
+addToList ((IntFuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToList xs'' (getNew (list ++ list')))
+													where
+														list = addToList xs (i+1)
+														list'= addToList xs' (getNew list)
 addToList ((FuncValNode t1 t2): xs) i 				= ((getValue t1), (i+1)): addToList xs (i+1)
 addToList ((PrintNode xs): xs'') i 					= addToList xs'' (i-1)
 addToList ((ReturnNode _ _): xs) i 					= addToList xs i
@@ -263,7 +270,7 @@ getInt :: [(String, Int)] -> Tree -> Int
 getInt [] _ 							= 0
 getInt ((s,i):list) n@(VarNode nS _ _)	| s == nS	= i
 										| otherwise = getInt list n
-getInt ((s,i):list) n@(FuncNode nS _ _)	| s == nS	= i
+getInt ((s,i):list) n@(IntFuncNode nS _ _)	| s == nS	= i
 										| otherwise = getInt list n
 getInt ((s,i):list) n@(DoFuncNode nS _)	| s == nS	= i
 										| otherwise = getInt list n

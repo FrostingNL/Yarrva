@@ -462,7 +462,14 @@ sampleFunction = unlines ["fleet SampleFunction {",
 
 
 test = unlines ["fleet Prog {",	
-			   	"    gift a, Arrr!",
+			   	"    doubloonShip a(doubloon i) {",
+			   	"        i be i + 1, Arrr!",
+			   	"        avast i, Arrr!",
+			   	"    }",
+			   	"    flagship() {",
+			   	"        doubloon b be a(1), Arrr!",
+			   	"        parrot b, Arrr!",
+			   	"    }",
 			   "}"
 			   ]
 
