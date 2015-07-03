@@ -10,7 +10,7 @@ import Parse
 import Grammar
 import Checker
 
---main = start "Example programs/fib.yarr"
+main = start "Example programs/test.yarr"
 
 start :: FilePath -> IO ()
 start input 
@@ -39,9 +39,6 @@ toSprockell list tree =
 		(BoolNode t1 t2)	-> 	spacing ++ "-- order " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
-
-		(ArrayNode t1 t2 xs)->  spacing ++ "-- " ++ (getValue t1) ++ "[] " ++ (getValue t2) ++ " be [" ++ funcText xs ++ "]\n" ++ 
-								storeArray t2 xs list
 
 		(AssignNode t1 t2) 	-> 	spacing ++ "-- " ++ (getValue t1) ++ " be " ++ 
 								printNode list t2 ++ " RegA,\n" ++

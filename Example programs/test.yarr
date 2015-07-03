@@ -1,5 +1,8 @@
-fleet Fleet {
+fleet Program {
 	flagship() {
-		parrot 10, Arrr!
+		doubloon c be add(a, 5), Arrr!
+		parley(b) {
+			parrot c, Arrr!
+		}
 	}
 }
