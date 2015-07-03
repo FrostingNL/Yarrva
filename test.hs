@@ -48,6 +48,25 @@ succesSyntax3 = unlines ["fleet Syntax {",
 syntax3Tree	  = 		ZupaNode "Syntax" [IntFuncNode "a" [] [IfNode (BoolExNode (Boolean (VarNode "Aye" 2 7))) [ReturnNode "avast" (VarNode "1" 3 6)]], 
 										   FuncNode "flagship" [] []]
 
+succesSyntax4 = unlines ["fleet Program {",	
+				"    doubloonShip a() {",
+				"        doubloon n be 1, Arrr!",
+				"        doubloon x be (n-1), Arrr!",
+						"parley(i be 5) { avast a, Arrr! } heave { avast i, Arrr!}",
+				"}",
+				" flagship() { a(), Arrr! }"
+		]
+syntax4Tree   = 		ZupaNode "Syntax" [IntFuncNode "a" [FuncValNode (VarNode "i" 0 0) (VarNode "Int" 0 0)] [IfElseNode (BoolExNode (Comp "be" (VarNode "i" 0 0) (VarNode "5" 0 0))) [ReturnNode "avast" (VarNode "i" 0 0)] (ElseNode [ReturnNode "avast" (VarNode "0" 0 0)])],
+										   FuncNode "flagship" [] []]
+
+succesSyntax5 = unlines ["fleet Program {",
+						 	"doubloonShip a() {",
+						 		"navigate(doubloon i be 0. i be below 5. gift i) {",
+						 			"parrot i, Arrr!",
+						 		"}",
+						 	"}",
+						 	"flagship() { }"]
+
 syntaxTest :: String -> Bool -> Bool
 syntaxTest s b = ((parse grammar Program $ tokens s) /= (PLeaf ((Keyword "PH"), "PH", 0, 0))) == b
 
