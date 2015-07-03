@@ -19,8 +19,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[Array],
 				[ifExprKey, lpar, BoolExpr, rpar, Block, Opt [elseKey, Block]],									-- IfElse Expression
 				[printKey, Expr, NoCat endmark],																-- Print Expression
-				[incKey, Type, NoCat endmark],
-				[decKey, Type, NoCat endmark],
+				[Alt [decKey] [incKey], Type, NoCat endmark],
 				[forKey, lpar, Assign, point, BoolExpr, point, Expr, rpar, Block],								-- For Expression
 				[whileKey, lpar, BoolExpr, rpar, Block],														-- While Expression
 				[Func, endmark],
@@ -54,7 +53,8 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	ArrayOp	-> [[idf, lbra, ArrayIndex, rbra]]
 	ArrayIndex->[[Alt [SyntCat Nmbr] [idf]]]
 	Bool  	-> [[Alt [trueKey] [falseKey]]]
-	ArrayList->[[Alt [Type] [idf], Rep0 [comma, Alt [Type] [idf] ] ]]
+	ArrayList->[[ArrayElem, Rep0 [comma, ArrayElem ] ]]
+	ArrayElem->[[Alt [Type] [idf]]]
 	FValues -> [[Opt [FuncVal, Rep0 [NoCat comma, FuncVal]]]]
 	FuncVal	-> [[Var, idf]]																						-- The variable you can use in a function decleration
 	Assign 	-> [[Opt [Var], idf, NoCat equalsKey, Expr]]														-- Assign decleration
@@ -602,17 +602,15 @@ test = unlines ["fleet Prog {",
 			   "}"
 			   ]
 
-test2 = unlines ["fleet Syntax {",
-							"doubloonShip a(doubloon i) {",
-								"parley(i be 5) {",
-									"avast i, Arrr!",
-								"}",
-								"heave {",
-									"avast 0, Arrr!",
-								"}",
-							"}",
-							"flagship() { }"
-				]
+test2 = unlines ["fleet Fleet {",
+					"doubloonShip a() {",
+						"doubloon i be 1, Arrr!",
+						"parley(i) {",
+						"}",
+					"}",
+					"flagship() {",
+					"}",
+				"}"]
 
 test3 = unlines ["fleet Fleet {",
 	"flagship() {",
