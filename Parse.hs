@@ -53,6 +53,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| FuncBlock
 		| GlobalVars
 		| VarDecl
+		| BoolExpr'
 
 		deriving (Eq,Show)
 
