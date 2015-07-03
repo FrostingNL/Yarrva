@@ -5,13 +5,16 @@ fleet Fib {
 		}
 		heave {
 			doubloon x be n-1, Arrr!
-			doubloon n be fib(x), Arrr!
+			fib(x), Arrr!
+			doubloon y be n-2, Arrr!
+			fib(y), Arrr!
+			n be y + x, Arrr!
 			avast n, Arrr!
 		}
 	}
 
 	flagship() {
-		doubloon f be fib(5), Arrr!
+		doubloon f be fib(4), Arrr!
 		parrot f, Arrr!
 	}
 }

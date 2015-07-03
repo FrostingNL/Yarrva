@@ -7,6 +7,11 @@ import Debug.Trace
 import FPPrac.Trees
 import System.IO
 
+{- 
+	The grammar used by the parser to create a ParseTree.
+		Argument 1: The Non Terminal to get the Rule from
+		Result:		The Rule corrosponding with the Non Terminal
+-}
 grammar :: Grammar
 grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	Program -> [[progKey, idf, PBlock]]																			-- The Main Program
@@ -63,15 +68,24 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[arrFunction]]
 	MainFunc-> [[mainKey, lpar, rpar, Block]]
 
+{- 
+	The datatype for our Types
+		Int -> Integer
+		Boo -> Bool
+		Str -> String
+		Arr t -> Array of the Type t
+		Err -> Error 
+-}
 data Types 	= Int
 			| Boo
 			| Str
 			| Arr Types
-			| Fun
 			| Err
 			deriving (Eq,Show)
 
-
+{- 	
+	The terminals used in the grammar.
+-}
 progKey 	= Keyword "fleet"
 functionKey = Keyword "ship"
 intFunction = Keyword "doubloonShip"
@@ -122,8 +136,14 @@ colon   = Symbol ":"
 point	= Symbol "."
 comma	= Symbol ","
 
+{- 
+	The datatype of the States of the Tokenizer
+-}
 data State = START | START' | ERROR | KEY | NUM | SYM | IDF | BOOL | BOOLID | STR | STRID | ARRAY | ARRAYTYPE | ARRAYID | ARRAYELEM | ARRAYOP | ARRAYOP' | ARRAYOP''
 
+{- 
+	The tokenizer which converts a input string into a list of tokens used in the parser.
+-}
 tokenizer :: State -> Int -> Int -> String -> [Token]
 tokenizer _ _ _ [] = []
 tokenizer s l c (' ':xs) 						= tokenizer s l 	(c+1) xs
@@ -223,17 +243,26 @@ tokenizer state l c str@(x:xs) =
 						restW = getUpTo str [',',']']
 						string = getString str
 						num = getNum str
-
+{-
+	Helper function for the Tokenizer
+-}
 calcC c str = c + length (getWord str)
 
+{-
+	A helper function which checks if a String is of the form: 'a[i]'
+-}
 isArrayOp :: String -> Bool
-isArrayOp [] = False
-isArrayOp (x:xs) = x /= '[' &&  contains (x:xs) '[' && contains (x:xs) ']'
+isArrayOp (x:xs) = x /= '[' &&  elem '[' (x:xs) && elem ']' (x:xs)
 
-
+{-
+	A helper function which checks if a String is of the form: 'be', 'be below' or 'be above'
+-}
 checkCompare :: String -> Bool
 checkCompare str = isCompKey $ getCompare str True
 
+{-
+	A helper function which checks if a String is of the form: 'be below' or 'be above'
+-}
 getCompare :: String -> Bool -> String
 getCompare [] _ = []
 getCompare (' ':xs) True = getCompare xs True
@@ -241,6 +270,9 @@ getCompare (' ':xs) False = []
 getCompare (x:xs) _ | isGramSymbol x = getCompare xs False
 				    | otherwise = x : getCompare xs False
 
+{-
+	A helper function which removes a compare statement ('be', 'be below' or 'be above')
+-}
 rmComp :: String -> Bool -> String
 rmComp [] _ = []
 rmComp (' ':xs) True = rmComp xs True
@@ -248,45 +280,64 @@ rmComp (' ':xs) False = (' ':xs)
 rmComp (x:xs) _ | isGramSymbol x = (x:xs)
 				| otherwise = rmComp xs False
 
+{-
+	A helper function which removes a comment from a Line.
+-}
 rmLineComment :: String -> String
 rmLineComment [] = []
 rmLineComment ('\n':xs) = ('\n':xs)
 rmLineComment (_:xs) = rmLineComment xs
 
+{-
+	A helper function which removes a block comment from one or multiple lines.
+-}
 rmBlockComment :: String -> String
 rmBlockComment [] = []
 rmBlockComment ('<':'<':xs) = xs
 rmBlockComment (_:xs) = rmBlockComment xs
 
+{-
+	A helper function which removes a Number from a String. Also works for negative numbers.
+-}
 rmNum :: String -> String
 rmNum [] = []
 rmNum (x:xs) | x == '-' = rmNum xs
 			 | isNumber x = rmNum xs
 			 | otherwise = (x:xs)
 
+{-
+	A helper function which checks if a given String is an Array.
+-}
 isArray :: String -> Bool
-isArray str = elem (getArrayType str) allTypes && contains str '[' && contains str ']'
+isArray str = elem (getArrayType str) allTypes && elem '[' str && elem ']' str
 
+{-
+	A helper function which gets the type of a given ArrayString.
+-}
 getArrayType :: String -> String
 getArrayType [] = ""
 getArrayType (x:xs) 
 	| x /= '[' = x : getArrayType xs
 	| otherwise = []
 
-contains :: String -> Char -> Bool
-contains [] _ = False
-contains (x:xs) a | x == a = True
-				  | otherwise = contains xs a
-
+{-
+	A helper function which gets the Array from a String
+-}
 getArray :: String -> String
 getArray [] = []
 getArray ('[':xs) = "[" ++ getArray xs
 getArray (']':xs) = "]"
 getArray (x:xs) = x : getArray xs
 
+{-
+	A helper function which checks if a letter is in lower
+-}
 isLowercase :: Char -> Bool
 isLowercase x = ord x >= 97 && ord x <= 122
 
+{-
+	A helper function which gets a String of the form '"[STRING]"' from a normal String.
+-}
 getString :: String -> String
 getString [] 			= []
 getString [x] 			= [x]
@@ -294,6 +345,9 @@ getString ('\\':'"':xs) = '\\': '"': getString (xs)
 getString (x:'"':xs)	= [x, '"']
 getString (x:xs)		= x: getString xs
 
+{-
+	A helper function which gets everything after a String from getString.
+-}
 getRestString :: String -> String
 getRestString [] = []
 getRestString [x] = []
@@ -302,33 +356,60 @@ getRestString (x:x':xs)
 	| x /= '\\' && x' == '"' = xs
 	| otherwise				 = getRestString xs
 
+{-
+	A helper function which checks if a String is a String of the form '"[STRING]"'
+-}
 isString :: String -> Bool
 isString (x:xs) = x == '"' && (xs!!((length xs)-1)) == '"'
 
+{-
+	A helper function which removes the endmark (, Arrr!) from a String.
+-}
 rmEndMark :: String -> String
 rmEndMark [] = []
 rmEndMark (',':' ':'A':'r':'r':'r':'!':xs) = xs
 
+{-
+	A helper function which checks if a character is a Symbol from the Grammar.
+-}
 isGramSymbol :: Char -> Bool
 isGramSymbol s = elem s [snd y | y <- allSymbols]
 
+{-
+	A helper function which gets the corrosponding Terminal from the Grammer
+-}
 getSymbol :: Char -> Alphabet
 getSymbol x = [fst tup | tup <- allSymbols, snd tup == x]!!0
 
+{-
+	A helper function which checks is a String is a Keyword from the Grammar.
+-}
 isKeyword :: String -> Bool
 isKeyword s = elem s [snd y | y <- allKeywords ++ compareKeys]
 
+{-
+	A helper function which gets the corrosponding Keyword from the Grammar.
+-}
 getKeyword :: String -> Alphabet
 getKeyword x = [fst tup | tup <- allKeywords ++ compareKeys, snd tup == x]!!0
 
+{-
+	A helper function which checks if a String is a Compare Keyword.
+-}
 isCompKey :: String -> Bool
 isCompKey s = elem s [snd y | y <- compareKeys]
 
+{-
+	A helper function which checks if a String is a Boolean (Aye or Nay).
+-}
 isBoolean :: String -> Bool
 isBoolean word 
 	| word == "Aye" || word == "Nay" = True
 	| otherwise = False
 
+{-
+	A helper function which gets the Number from a String.
+-}
 getNum :: String -> String
 getNum [] = []
 getNum (x:xs)
@@ -336,32 +417,50 @@ getNum (x:xs)
 	| not (isNumber x) = []
 	| otherwise = x : getNum xs
 
+{-
+	A helper function which get a word, without special characters otherwise used.
+-}
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
 	| elem x " +-*/,()." = []
 	| otherwise = x: getWord xs
 
+{-
+	A helper function which gets an Identifier from a String. An elaboration of getWord.
+-}
 getIdf :: String -> String
 getIdf [] = []
 getIdf (x:xs) | elem x (" +-*/,().[]") = []
 			  | otherwise = x : getIdf xs
 
+{-
+	A helper function which removes a Identifier from a String.
+-}
 rmIdf :: String -> String
 rmIdf [] = []
 rmIdf (x:xs) | elem x (" +-*/,().[]") = (x:xs)
 			 | otherwise = rmIdf xs
 
+{-
+	A helper function which gets the part of the String until one of the characters in the list is found.
+-}
 getUpTo :: String -> [Char] -> String
 getUpTo [] _ = []
 getUpTo (s:str) chars | elem s chars = []
 				      | otherwise = s : getUpTo str chars
 
+{-
+	A helper function which removes part of the String until one of the characters in the list is found.
+-}
 rmUpTo :: String -> [Char] -> String
 rmUpTo [] _ = []
 rmUpTo (s:str) chars | elem s chars = (s:str)
 					 | otherwise = rmUpTo str chars
 
+{-
+	A helper function which gets all the special characters in a String.
+-}
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
@@ -369,9 +468,15 @@ getRest (x:xs)
 	| x == ' ' = (x:xs)
 	| otherwise = getRest xs
 
+{-
+	A Shortcut to the endmark.
+-}
 getEndmark :: String
 getEndmark = ", Arrr!"
 
+{-
+	A Shortcut to every Keyword.
+-}
 allKeywords :: [(Alphabet, String)]
 allKeywords = [(progKey, "fleet"),
 				(functionKey, "ship"),
@@ -404,12 +509,17 @@ allKeywords = [(progKey, "fleet"),
 				(strFunction, "bootyShip")
 				]
 
+{-
+	A Shortcut to every Compare Key
+-}
 compareKeys :: [(Alphabet, String)]
 compareKeys =  [(lesserKey, "below"),
 				(greaterKey, "above")
 			   ]
 
-
+{-
+	A Shortcut to all Symbols.
+-}
 allSymbols :: [(Alphabet, Char)]
 allSymbols = [ (lpar, '('),
 				(rpar, ')'),
@@ -430,11 +540,15 @@ allSymbols = [ (lpar, '('),
 				(comma, ',')
 			]
 
-
-
+{-
+	A Shortcut to all Types.
+-}
 allTypes :: [String]
 allTypes = ["doubloon", "booty", "order"]
 
+{-
+	A helper function which determines if a String starts with another String.
+-}
 startsWith :: String -> String -> Bool
 startsWith [] _ 	= True
 startsWith _ [] 	= False
@@ -442,6 +556,9 @@ startsWith (s:search) (w:word)
 	| s == w = startsWith search word
 	| otherwise = False
 
+{-
+	A Shortcut to some sample Programs.
+-}
 helloWorld = unlines ["fleet HelloWorld {",
 					 "   parrot \"Ahoy World!\", Arrr!",
 					 "}"
@@ -503,14 +620,26 @@ test3 = unlines ["fleet Fleet {",
 	"}",
 	"}"]
 
+{-
+	A Shortcut to the tokenizer
+-}
 tokens = tokenizer START 0 0
 
+{-
+	A Shortcut to the parser
+-}
 test0 = parse grammar Program $ tokens test
 test1 = parse grammar Program $ tokens test2
 
+{-
+	A Shortcut to show a ParseTree
+-}
 showTestTree = showRoseTree $ toRoseTree1 test0
 showTestTree2 = showRoseTree $ toRoseTree1 test1
 
+{-
+	A Shortcut print the tokens in a readable way.
+-}
 printTupList :: [(Alphabet, String, Int, Int)] -> IO String
 printTupList [t] = do return (show t)
 printTupList (t:tup) = do
@@ -533,6 +662,7 @@ file f = do
 convert :: ParseTree -> Tree
 convert tree = case tree of 
 	(PLeaf (a, s, l, c)) -> VarNode s l c
+	(PNode BoolExpr [PLeaf (a, s, l, c)])																			-> BoolExNode $ Boolean (VarNode s l c)
 	(PNode _ [PLeaf (a, s, l, c)])																					| s == "Doubloon" 	-> VarNode "Int" l c
 																													| s == "Booty"		-> VarNode "String" l c
 																													| otherwise 		-> VarNode s l c
@@ -569,7 +699,6 @@ convert tree = case tree of
 	(PNode _ (x: (PLeaf (Keyword "above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "be below",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
 	(PNode _ (x: (PLeaf (Keyword "be above",s, _, _)): x': []))														-> BoolExNode $ Comp s (convert x) (convert x')
-	(PNode _ ((PNode Bool [x]): []))																				-> BoolExNode $ Boolean (convert x)
 	(PNode _ [node])																								-> convert node
 	s -> error ("ERROR: " ++ (show s))
 
