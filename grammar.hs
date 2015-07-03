@@ -26,10 +26,11 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 	PBlock	-> [[lcbr, Rep0 [GlobalVars], Rep0 [FuncBlock], MainFunc, rcbr]] 
 	GlobalVars->[[Var, idf, NoCat equalsKey, Expr, NoCat endmark]]
 	FuncBlock->[[Function, idf, lpar, FValues, rpar, Block]]
-	BoolExpr-> [[Expr, Alt [equalsKey] [Alt [Alt [lesserKey] [lequalsKey]] [Alt [greaterKey] [gequalsKey]]], Expr],									-- A boolean expression
+	BoolExpr-> [[BoolExpr'],									-- A boolean expression
 				[Bool],																							-- A boolean
 				[idf],																							-- An identifier
-				[BoolExpr, Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
+				[BoolExpr', Alt [orKey] [andKey], BoolExpr]] 													-- Two boolean expressions
+	BoolExpr'-> [[Expr, Alt [equalsKey] [Alt [Alt [lesserKey] [lequalsKey]] [Alt [greaterKey] [gequalsKey]]], Expr]]
 	Expr 	-> [[Alt [Expr2] [lpar, Expr2, rpar]]]
 	Expr2 	-> [[ArrayOp],	
 				[Type, Opt [SyntCat Op, Type]],																	-- An expression
@@ -484,14 +485,17 @@ test = unlines ["fleet Prog {",
 			   "}"
 			   ]
 
-test2 = unlines ["fleet Program {",	
-				"    flagship() {",
-				"        doubloon n be 1, Arrr!",
-				"        doubloon x be (n-1), Arrr!",
-						"navigate(doubloon a be 0. a be above 5. gift a) {",
-						 "      }",
-				"}}"
-		]
+test2 = unlines ["fleet Syntax {",
+							"doubloonShip a(doubloon i) {",
+								"parley(i be 5) {",
+									"avast i, Arrr!",
+								"}",
+								"heave {",
+									"avast 0, Arrr!",
+								"}",
+							"}",
+							"flagship() { }"
+				]
 
 test3 = unlines ["fleet Fleet {",
 	"flagship() {",
