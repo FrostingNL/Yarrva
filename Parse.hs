@@ -54,6 +54,7 @@ data Alphabet =	  Symbol     String		-- Token given ("char" specific for this ex
 		| GlobalVars
 		| VarDecl
 		| BoolExpr'
+		| ArrayElem
 
 		deriving (Eq,Show)
 
