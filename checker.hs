@@ -62,7 +62,7 @@ checkUsage t@(s,p) tree =
 -}
 warning s	= trace ("*** Warning: '" ++ s ++ "' is never used.") True
 usage a b	= checkUsage a b
-uMap a b	= anyT (map (checkUsage a) b)
+uMap a b	= or (map (checkUsage a) b)
 falseMap a b= all (==False) (map (checkUsage a) b)
 
 {-
@@ -150,11 +150,14 @@ inList :: String -> [(String, Types)] -> Bool
 inList a b = (elem (a,Int) b) || (elem (a,Str) b) || (elem (a,Boo) b) || (elem (a,Arr Int) b) || (elem (a,Arr Boo) b) || (elem (a,Arr Str) b) || (elem (a,Arr Str) b)
 
 {-
-	Checks 
+	Checks wether the type of the Right Hand Side of an Assignments is the same as the Left Hand Side.
 -}
 checkAssignType :: Tree -> Tree -> [[(String, Types)]] -> Bool
 checkAssignType idf val list = checkType val (getTreeType idf list) list
 
+{-
+	Converts a String into a Type
+-}
 getTypeFromString :: String -> Types
 getTypeFromString s
 	| s == "String" || s == "booty"  	= Str
@@ -163,6 +166,9 @@ getTypeFromString s
 	| s == "Array"	= Arr Err
 	| otherwise		= Err
 
+{-
+	Converts a Type into a String
+-}
 getStringFromType :: Types -> String
 getStringFromType s
 	| s == Str 		= "String" 
@@ -170,6 +176,13 @@ getStringFromType s
 	| s == Boo 		= "Bool"
 	| otherwise		= "Error"
 
+{-
+	The function which checks if a certain Tree is of a certain Type.
+		Argument 1: The Tree to check.
+		Argument 2: The Type to check.
+		Argument 3: The current Scope, in order to get Types of Identifiers
+		Returns:	True if the Type is correct, an Error if it's incorrect.
+-}
 checkType :: Tree -> Types -> [[(String, Types)]] -> Bool
 checkType tree Int list =
 	case tree of 
@@ -221,7 +234,9 @@ checkType tree (Arr t) list =
 		(DoFuncNode s xs)					-> getType s 0 0 list == t
 		(ArrayOpNode t1 t2)					-> checkType t1 t list && checkType t2 t list 		
 		_									-> False
-
+{-
+	Helper Function for checkType.
+-}
 wrongType a b c d	= error ("Incorrect Type: " ++ (getS a) ++ " is not an " ++ b ++ "! Line: " ++ (show c) ++ ":" ++ (show d))
 getL (VarNode _ l _) = l
 getL _ 				 = 0 
@@ -230,9 +245,17 @@ getC _ 				 = 0
 getS (VarNode s _ _) = s
 getS _				 = ""
 
+{-
+	Gets a Type from a certain String (Identifier).
+		Argument 1: The String to get the Type from.
+		Argument 2: The line number in which the String is.
+		Argument 3: The column number on which the String starts.
+		Argument 4: The current Scope.
+		Returns: 	The Type of the given String, or an Error if the String isn't in the current Scope.
+-}
 getType :: String -> Int -> Int -> [[(String, Types)]] -> Types
 getType	s l c []					| isString s 				= Str 
-									| allT (map (isNumber) s) 	= Int
+									| and (map (isNumber) s) 	= Int
 									| isBoolean s 				= Boo 
 									| isArray s 				= Arr Err
 									| otherwise																= error ("Declaration: '" ++ s ++ "' has not been defined yet! Line: " ++ (show l) ++ ":" ++ (show c))
@@ -240,11 +263,23 @@ getType s l c ([]:list)				= getType s l c list
 getType s l c (((s2,t):tup):list) 	| s == s2 	= t
 							  		| otherwise = getType s l c (tup:list)
 
+{-
+	Gets a Type from a certain Tree
+		Argument 1: The Tree to get the Type from.
+		Argument 2: The current Scope.
+		Returns: 	The Type of the given Tree, or an Error if the Tree isn't in the current Scope.
+-}
 getTreeType :: Tree -> [[(String, Types)]] -> Types
 getTreeType (VarNode s l c) list 		= getType s l c list
 getTreeType (OpNode s t1 t2) list 		= getTreeType t1 list
 getTreeType _ list 			 			= Err
 
+{-
+	Checks wether a certain Tree is inside the given Scope.
+		Argument 1: The scope to check.
+		Argument 2: The Tree to check.
+		Returns: 	True if the Tree is in the current Scope, Error if it isn't.
+-}
 inScope :: [[(String, Types)]] -> Tree -> Bool
 inScope ([]:x:list) a 							= inScope (x:list) a
 inScope [[]] (VarNode s _ _)					= isString s || isNumber (head s) || (head s) == '-' || isBoolean s
@@ -305,25 +340,37 @@ inScope list tree =
 		(IntFuncNode s xs xs')		-> funcM xs xs' list
 		(BoolFuncNode s xs xs')		-> funcM xs xs' list
 		_							-> False
-usageM a b	= allT (map (\x -> checkUsage x a) (addAllToScope b))
+{-
+	Helper Functions for inScope
+-}
+usageM a b	= and (map (\x -> checkUsage x a) (addandoScope b))
 scopeM a b 	= scopeM2 ((addToScopeSC a): b) (getOtherNodes a)
 funcM a b c = scopeM2 (((addToScopeSC a) ++ (addToScopeSC b)): c) b
-scopeM2 a b = allT (map (inScope a) b)
-
+scopeM2 a b = and (map (inScope a) b)
 scopeError a = error ("Scope: " ++ (show a) ++ " is not in the current Scope!")
  
-addAllToScope :: Tree -> [(String, Types)]
-addAllToScope tree =
+ {-
+	Creates a new Scope when going down a Level.
+		Argument 1: The starting Tree.
+		Result:		The new Scope.
+-}
+addandoScope :: Tree -> [(String, Types)]
+addandoScope tree =
 	case tree of 
-		(IfNode _ xs)		 -> (addToScopeSC xs) ++ (concat (map addAllToScope xs))
-		(IfElseNode _ xs xs')-> (addToScopeSC xs) ++ (concat (map addAllToScope xs) ++ addAllToScope xs')
-		(ElseNode xs)		 -> (addToScopeSC xs) ++ (concat (map addAllToScope xs))
-		(WhileNode _ xs)	 -> (addToScopeSC xs) ++ (concat (map addAllToScope xs))
-		(ZupaNode _ xs)		 -> (addToScopeSC xs) ++ (concat (map addAllToScope xs))
-		(ForNode xs _ _ xs') -> (addToScopeSC [xs]) ++ (addToScopeSC xs') ++ (concat (map addAllToScope xs'))
-		(FuncNode _ xs xs')  -> (addToScopeSC xs) ++ (addToScopeSC xs') ++ (concat (map addAllToScope xs'))
+		(IfNode _ xs)		 -> (addToScopeSC xs) ++ (concat (map addandoScope xs))
+		(IfElseNode _ xs xs')-> (addToScopeSC xs) ++ (concat (map addandoScope xs) ++ addandoScope xs')
+		(ElseNode xs)		 -> (addToScopeSC xs) ++ (concat (map addandoScope xs))
+		(WhileNode _ xs)	 -> (addToScopeSC xs) ++ (concat (map addandoScope xs))
+		(ZupaNode _ xs)		 -> (addToScopeSC xs) ++ (concat (map addandoScope xs))
+		(ForNode xs _ _ xs') -> (addToScopeSC [xs]) ++ (addToScopeSC xs') ++ (concat (map addandoScope xs'))
+		(FuncNode _ xs xs')  -> (addToScopeSC xs) ++ (addToScopeSC xs') ++ (concat (map addandoScope xs'))
 		_					 -> []
 
+{-
+	A variation on addToScope.
+		Argument 1: The list of Trees to add to the Scope.
+		Returns:	ONE scope.
+-}	
 addToScopeSC :: [Tree] -> [(String, Types)]
 addToScopeSC [] 										= []
 addToScopeSC ((BootyNode (VarNode s l c) t): xs) 		= (s, Str): addToScopeSC xs 
@@ -337,6 +384,11 @@ addToScopeSC ((IntFuncNode s _ _): xs) 					= (s, Int): addToScopeSC xs
 addToScopeSC ((BoolFuncNode s _ _): xs) 				= (s, Boo): addToScopeSC xs
 addToScopeSC (_: xs) 									= addToScopeSC xs 
 
+{-
+	Gets the String value of a given Tree.
+		Argument 1: The Tree to get the value from.
+		Returns: 	The String value of the given Tree.
+-}
 getValue :: Tree -> String
 getValue (VarNode s _ _) 	| s == "Aye" = "1"
 					   		| s == "Nay" = "0"
@@ -352,9 +404,12 @@ getValue (BoolFuncNode s _ _) = s
 getValue (BoolExNode (Comp s t1 t2)) = getValue t1 ++ " " ++ s ++ " " ++ getValue t2
 getValue s = show s 
 
-allT = all (==True)
-anyT = any (==True)
-
+{-
+	Checks if a String is in the current Scope.
+		Argument 1: The String to check.
+		Argument 2: The current Scope.
+		Returns: 	True if the String is in the Scope, False if not.
+-}
 stringInScope :: String -> [[(String, Types)]] -> Bool
 stringInScope s [] = False
 stringInScope s ([]: rest) = stringInScope s rest

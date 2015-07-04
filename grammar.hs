@@ -644,19 +644,9 @@ printTupList (t:tup) = do
 						putStrLn (show t)
 						printTupList tup
 
-fileList :: FilePath -> IO ()
-fileList f = do  
-	handle <- openFile f ReadMode  
-	contents <- hGetContents handle
-	showRoseTreeList [toRoseTree1 $ parse grammar Program $ tokens contents, toRTree $ convert $ parse grammar Program $ tokens contents]
-
-file :: FilePath -> IO ()
-file f = do  
-	handle <- openFile f ReadMode  
-	contents <- hGetContents handle
-	printTupList $ tokens contents
-	showRoseTree $ toRTree $ convert $ parse grammar Program $ tokens contents
-
+{-
+	The function to convert a ParseTree into our own AST Type, Tree.
+-}
 convert :: ParseTree -> Tree
 convert tree = case tree of 
 	(PLeaf (a, s, l, c)) -> VarNode s l c
@@ -700,39 +690,48 @@ convert tree = case tree of
 	(PNode _ [node])																								-> convert node
 	s -> error ("ERROR: " ++ (show s))
 
-data Tree = VarNode 	String Int Int
-		  | BootyNode 	Tree Tree
-		  | DoubloonNode Tree Tree
-		  | BoolNode 	Tree Tree
-		  | TreasureNode Tree Tree
-		  | AssignNode	Tree Tree
-		  | OpNode 		String Tree Tree
-		  | BoolExNode 	BoolEx
-		  | GiftNode	Tree
-		  | PlunderNode Tree
-		  | IfNode		Tree [Tree]
-		  | IfElseNode 	Tree [Tree] Tree
-		  | ElseNode	[Tree]
-		  | ForNode		Tree Tree Tree [Tree]
-		  | WhileNode	Tree [Tree]
-		  | FuncNode 	String [Tree] [Tree]
+{-
+	Our AST Type, Tree
+-}
+data Tree = VarNode 		String Int Int
+		  | BootyNode 		Tree Tree
+		  | DoubloonNode	Tree Tree
+		  | BoolNode 		Tree Tree
+		  | TreasureNode	Tree Tree
+		  | AssignNode		Tree Tree
+		  | OpNode 			String Tree Tree
+		  | BoolExNode 		BoolEx
+		  | GiftNode		Tree
+		  | PlunderNode 	Tree
+		  | IfNode			Tree [Tree]
+		  | IfElseNode 		Tree [Tree] Tree
+		  | ElseNode		[Tree]
+		  | ForNode			Tree Tree Tree [Tree]
+		  | WhileNode		Tree [Tree]
+		  | FuncNode 		String [Tree] [Tree]
 		  | BoolFuncNode 	String [Tree] [Tree]
 		  | StrFuncNode 	String [Tree] [Tree]
 		  | IntFuncNode 	String [Tree] [Tree]
 		  | ArrFuncNode 	String [Tree] [Tree]
-		  | FuncValNode	Tree Tree
-		  | PrintNode	Tree
-		  | ReturnNode	String Tree
-		  | DoFuncNode	String [Tree]
-		  | ArrayNode   Tree Tree [Tree]
-		  | ZupaNode	String [Tree]
-		  | ArrayOpNode Tree Tree
+		  | FuncValNode		Tree Tree
+		  | PrintNode		Tree
+		  | ReturnNode		String Tree
+		  | DoFuncNode		String [Tree]
+		  | ArrayNode   	Tree Tree [Tree]
+		  | ZupaNode		String [Tree]
+		  | ArrayOpNode 	Tree Tree
 		  deriving (Eq, Show)
 
+{-
+	An extra type especially for Boolean Expressions. ('Aye' or '1 be below 5')
+-}
 data BoolEx = Comp String Tree Tree
 			| Boolean Tree
 			deriving (Eq, Show)
 
+{-
+	A helper function to convert our AST Type, Tree, into a RoseTree which can be shown on the webpage.
+-}
 toRTree :: Tree -> RoseTree
 toRTree (VarNode s l c) 			= RoseNode ((show l) ++ ":" ++ (show c) ++ ":" ++ s) []
 toRTree (ArrayOpNode t1 t2)			= RoseNode "arrayOp" [toRTree t1, toRTree t2]
@@ -763,6 +762,7 @@ toRTree (DoFuncNode s list)			= RoseNode s (map toRTree list)
 toRTree (ArrayNode t1 t2 list)		= RoseNode "arrayDecl" ([toRTree t1, toRTree t2] ++ (map toRTree list))
 toRTree (ZupaNode s list)			= RoseNode s (map toRTree list)
 
+{-
+	A shortcut to quickly show a converted Tree.
+-}
 showConvertedTree = showRoseTree $ toRTree $ convert test1
-
---main = file "Example programs/test.yarr"

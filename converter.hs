@@ -12,6 +12,11 @@ import Checker
 
 main = start "Example programs/test.yarr"
 
+{-
+	The main function, which starts the convertor.
+		Argument 1: The FilePath of the to-be-converted file.
+		Returns:	The Monad IO.
+-}
 start :: FilePath -> IO ()
 start input 
 	= do
@@ -25,36 +30,41 @@ start input
 				hClose inHandle
 				hClose outHandle
 			else do
-				putStrLn "SDS"
 				hClose inHandle
 				hClose outHandle
 
+{-
+	The main converter function.
+		Argument 1: A list to keep track of memory locations of variables.
+		Argument 2: The Tree to be converted.
+		Returns:	A String containing a Haskell File with the Spril instructions.
+-}
 toSprockell :: [(String, Int)] -> Tree -> String
 toSprockell list tree =
 	case tree of
 		(DoubloonNode t1 t2)-> 	spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
-								printNode list t2 ++ " RegA,\n" ++ 
+								printAndGetNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 		
 		(BoolNode t1 t2)	-> 	spacing ++ "-- order " ++ (getValue t1) ++ " be " ++ 
-								printNode list t2 ++ " RegA,\n" ++ 
+								printAndGetNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 
 		(ArrayNode t1 t2 xs)->  spacing ++ "-- " ++ (getValue t1) ++ "[] " ++ (getValue t2) ++ " be [" ++ funcText xs ++ "]\n" ++ 
 								storeArray t2 xs list
 
 		(AssignNode t1 t2) 	-> 	spacing ++ "-- " ++ (getValue t1) ++ " be " ++ 
-								printNode list t2 ++ " RegA,\n" ++
+								printAndGetNode list t2 ++ " RegA,\n" ++
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
  
 		(OpNode s t1 t2)	->	(getValue t1) ++ " " ++ s ++ " " ++ (getValue t2) ++ "\n" ++
-								spacing ++ pNode list t1 ++ " RegB,\n" ++
-								spacing ++ pNode list t2 ++ " RegC,\n" ++
+								spacing ++ getNode list t1 ++ " RegB,\n" ++
+								spacing ++ getNode list t2 ++ " RegC,\n" ++
 								spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegC RegA,\n" ++
 								spacing ++ "Push RegA,\n"
 
 		(PrintNode t1) 		->	spacing ++ "-- parrot (" ++ (getValue t1) ++ ")\n"  ++
-								spacing ++ pNode list t1 ++ " RegA,\n" ++
+								spacing ++ getNode list t1 ++ " RegA,\n" ++
 								spacing ++ "Const (ord '0') RegB,\n" ++ 
 								spacing ++ "Compute Add RegA RegB RegB,\n" ++
        							spacing ++ "Write RegB stdio,\n" ++
@@ -68,14 +78,14 @@ toSprockell list tree =
 								spacing ++ "]\n\nmain = run 1 prog >> putChar '\\n'"
 
 		(GiftNode t1)		-> 	spacing ++ "-- gift " ++ (getValue t1) ++ "\n" ++
-								spacing ++ pNode list t1 ++ " RegA,\n" ++
+								spacing ++ getNode list t1 ++ " RegA,\n" ++
 								spacing ++ "Const 1 RegB,\n" ++
 								spacing ++ "Compute Add RegA RegB RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n" ++ 
 								spacing ++ "Push RegA,\n"
 
 		(PlunderNode t1)	-> 	spacing ++ "-- plunder " ++ (getValue t1) ++ "\n" ++
-								spacing ++ pNode list t1 ++ " RegA,\n" ++
+								spacing ++ getNode list t1 ++ " RegA,\n" ++
 								spacing ++ "Const 1 RegB,\n" ++
 								spacing ++ "Compute Sub RegA RegB RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n" ++
@@ -121,7 +131,7 @@ toSprockell list tree =
 
 		n@(ReturnNode _ t1)					->	spacing ++ "-- avast " ++ (getValue t1) ++ "\n" ++
 												spacing ++ "Pop RegE,\n" ++
-												spacing ++ pNode list t1 ++ " RegA,\n" ++
+												spacing ++ getNode list t1 ++ " RegA,\n" ++
 												spacing ++ "Push RegA,\n" ++
 												spacing ++ "Push RegE,\n"
 
@@ -148,6 +158,12 @@ toSprockell list tree =
 
 		_					-> 	""
 
+{-
+	Helper Function of toSprockell - Prints a single Char to Standard Out.
+		Argument 1: The list of memory locations.
+		Argument 2: The char to print.
+		Returns:	String of Spril Instructions instructing a Print function.
+-}
 printFunc :: [(String, Int)] -> Char -> String
 printFunc list c =	spacing ++ "Const (ord '" ++ [c] ++ "') RegA,\n" ++
 					spacing ++ "Const (ord '0') RegB,\n" ++ 
@@ -156,20 +172,44 @@ printFunc list c =	spacing ++ "Const (ord '" ++ [c] ++ "') RegA,\n" ++
    					spacing ++ "Read (Addr 0x0),\n" ++
    					spacing ++ "Receive RegB,\n"
 
+{-
+	Helper Function of toSprockell - Stores an Array to memory.
+		Argument 1: The Identifier of the Array.
+		Argument 2: The List of Array elements.
+		Argument 3: The List of memory locations.
+		Returns:	String of Spril Intructions Instructing to store an Array.
+-}
 storeArray :: Tree -> [Tree] -> [(String, Int)] -> String
-storeArray idf (x:xs) list 	= spacing ++ pNode list x
+storeArray idf (x:xs) list 	= spacing ++ getNode list x
 
+{-
+	Helper Function of toSprockell - Gets the String representation of a Function.
+		Argument 1: The Arguments of a Function to get the String representation from.
+		Returns: 	The String representation of the Function Arguments
+-}
 funcText :: [Tree] -> String
 funcText []     = ""
 funcText [x]    = (getValue x)
 funcText (x:xs) = (getValue x) ++ ", " ++ funcText xs
 
+{-
+	Helper Function of toSprockell - Pushes Function Arguments to the Stack.
+		Argument 1: The list of memory locations.
+		Argument 2: The List of Function Arguments.
+		Returns:	String of Spril Instructions instructing to push Function Arguments.
+-}
 pushFunc :: [(String, Int)] -> [Tree] -> String
 pushFunc list []  	 =  "" 
 pushFunc list (x:xs) = 	spacing ++ "Const " ++ (show (getInt list x)) ++ " RegA,\n" ++ 
 						spacing ++ "Push RegA,\n" ++
 						pushFunc list xs
 
+{-
+	Helper Function of toSprockell - Pops Function Arguments from the Stack.
+		Argument 1: The list of memory locations.
+		Argument 2: The List of Function Arguments.
+		Returns:	String of Spril Instructions instructing to pop Function Arguments.
+-}
 popFunc :: [(String, Int)] -> [Tree] -> String
 popFunc list []  	= "" 
 popFunc list (n:xs) = popFunc list xs ++
@@ -177,6 +217,11 @@ popFunc list (n:xs) = popFunc list xs ++
 					  spacing ++ "Load (Deref RegA) RegB,\n" ++ 
 					  spacing ++ "Store RegB (Addr " ++ (show (getInt list n)) ++ "),\n"
 
+{-
+	Helper Function of toSprockell - Calculates the number of Spril-lines of a certain segment.
+		Argument 1: The List of Trees to calculate the number of Spril-lines from.
+		Returns:	The number of Spril-Lines needed to convert the given segement.
+-}
 calcLen :: [Tree] -> Int
 calcLen ((DoubloonNode (VarNode _ _ _) (VarNode _ _ _)):xs)	= 2 + calcLen xs
 calcLen ((DoubloonNode (VarNode _ _ _) xs):xs')				= 2 + calcLen [xs] + calcLen xs'
@@ -201,30 +246,65 @@ calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
 calcLen ((ReturnNode _ _): xs)								= 4 + calcLen xs
 calcLen _													= 0
 
+{-
+	Helper Function of toSprockell - Converts a Boolean Expression ('Aye' or 'n be below 5') to a String representation.
+		Argument 1: The Boolean Expression to convert to a String.
+		Returns:	The String representation of the Boolean Expression.
+-}
 boolText :: BoolEx -> String
 boolText (Comp s t1 t2) = 	(getValue t1) ++ " " ++ s ++ " " ++ getValue(t2)
 boolText (Boolean t1)   = 	(getValue t1) 
 
+{-
+	Helper Function of toSprockell - Evalueates a Boolean Expression.
+		Argument 1: The Boolean Expression to evaluate.
+		Argument 2: The List of memory locations.
+		Returns:	String of Spril Instructions instruction to evaluate a Boolean Expression.
+-}
 boolEx :: BoolEx -> [(String, Int)] -> String
-boolEx (Comp s t1 t2) list 	= spacing ++ pNode list t2 ++ " RegA,\n" ++ 
-							  spacing ++ pNode list t1 ++ " RegB,\n" ++ 
+boolEx (Comp s t1 t2) list 	= spacing ++ getNode list t2 ++ " RegA,\n" ++ 
+							  spacing ++ getNode list t1 ++ " RegB,\n" ++ 
 							  spacing ++ "Compute " ++ (getOp s False) ++ " RegB RegA RegA,\n"
-boolEx (Boolean t1) list	= spacing ++ pNode list t1 ++ " RegA,\n" ++
+boolEx (Boolean t1) list	= spacing ++ getNode list t1 ++ " RegA,\n" ++
 							  spacing ++ "Const 1 RegB,\n" ++
 							  spacing ++ "Compute Equal RegB RegA RegA,\n"
 
-printNode :: [(String, Int)] -> Tree -> String
-printNode list t@(VarNode _ _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
-printNode list t 					= toSprockell list t ++ spacing ++ "Pop "
+{-
+	Helper Function of toSprockell - Prints the node and gets it from the Stack of from Memory.
+		Argument 1: The list of memory locations.
+		Argument 2: The Tree to print and get.
+		Result:		String of Spril Instructions intruction to load a variable from the Stack or from Memory.
+-}
+printAndGetNode :: [(String, Int)] -> Tree -> String
+printAndGetNode list t@(VarNode _ _ _)	= (getValue t) ++ "\n" ++ spacing ++ load list t
+printAndGetNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
-pNode :: [(String, Int)] -> Tree -> String
-pNode list t@(VarNode _ _ _)	= load list t
-pNode list t 					= trace (show t) $ toSprockell list t ++ spacing ++ "Pop "
+{-
+	Helper Function of toSprockell - Gets a node from the Stack of from Memory.
+		Argument 1: The list of memory locations.
+		Argument 2: The Tree to get.
+		Result:		String of Spril Instructions intruction to load a variable from the Stack or from Memory.
+-}
+getNode :: [(String, Int)] -> Tree -> String
+getNode list t@(VarNode _ _ _)	= load list t
+getNode list t 					= trace (show t) $ toSprockell list t ++ spacing ++ "Pop "
 
+{-
+	Helper Function of toSprockell - Loads a Indetifier from Memory or loads a Constant.
+		Argument 1: The list of Memory Locations.
+		Argument 2: The Tree to load.
+		Returns:	String of Spril Instructions instructing to load a Identifier from Memory or load a Constant.
+-}
 load :: [(String, Int)] -> Tree -> String
 load list t | getInt list t /= 0 	= "Load (Addr " ++ (show (getInt list t)) ++ ")"
 			| otherwise				= "Const (" ++ (getValue t) ++ ")"
 
+{-
+	Helper Function of toSprockell - Converts a String Operator to a String Operator Spril can use.
+		Argument 1: The String to convert.
+		Argument 2: True = Normal, False = Reversed (Needed for the while-loop)
+		Returns:	The String with the converted Operator.
+-}
 getOp :: String -> Bool -> String
 getOp "+" _ = "Add"
 getOp "-" _ = "Sub"
@@ -241,6 +321,12 @@ getOp "be below" True = "LtE"
 getOp "be above" False = "Lt"
 getOp "be above" True = "GtE"
 
+{-
+	Helper Function of toSprockell - Adds all Variables to the List of Memory locations, given them a memory location.
+		Argument 1: The list of Trees with the variables.
+		Argument 2: The last memory location. (Can be 0).
+		Returns:	List of memory locations.
+-}
 addToList :: [Tree] -> Int -> [(String, Int)]
 addToList [] _										= []
 addToList ((BootyNode (VarNode s l _) t): xs)	i	= (s, (i+1)): addToList xs (i+1)
@@ -277,10 +363,21 @@ addToList ((PrintNode xs): xs'') i 					= addToList xs'' (i-1)
 addToList ((ReturnNode _ _): xs) i 					= addToList xs i
 addToList _ i 										= []
 
+{-
+	Helper Function of addToList - Gets a free memory location from the list.
+		Argument 1: The current list of memory locations.
+		Returns:	A free spot in the list.
+-}
 getNew :: [(String, Int)] -> Int
 getNew [] 	= 1
 getNew list = (snd (last list)) + 1 
 
+{-
+	Helper Function of toSprockell - Gets a memory location from the list.
+		Argument 1: The list of memory locations.
+		Argument 2: The Tree ot get the memory location from.
+		Returns:	The memory location of the Tree.
+-}
 getInt :: [(String, Int)] -> Tree -> Int
 getInt [] _ 							= 0
 getInt ((s,i):list) n@(VarNode nS _ _)	| s == nS	= i
@@ -293,5 +390,9 @@ getInt ((s,i):list) n@(FuncValNode r t) | (getValue r) == s = i
 										| otherwise = getInt list n
 getInt list _ 							= 0
 
+{-
+	Helper Function of toSprockell - A shortcut to add spacing in front of every line for readability.
+		Returns:	A String of spaces.
+-}
 spacing :: String
 spacing = "       "
