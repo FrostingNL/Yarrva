@@ -1,21 +1,9 @@
 fleet Fleet {
-	doubloon a be 1, Arrr!
-	order b be Aye, Arrr!
-
-	doubloonShip add(doubloon x, doubloon y) {
-		doubloon temp be x + y, Arrr!
-		avast temp, Arrr!
-	}
-
-	doubloonShip sub(doubloon x, doubloon y) {
-		doubloon temp be x - y, Arrr!
-		avast temp, Arrr!
-	}
-
 	flagship() {
-		doubloon five be 5, Arrr!
-		parley(b) {
-			parrot (add(a, five)), Arrr!
+		doubloon i be 0, Arrr!
+		whirlpool(i below 5) {
+			parrot i, Arrr!
+			gift i, Arrr!
 		}
 	}
 }

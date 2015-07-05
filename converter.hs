@@ -111,9 +111,11 @@ toSprockell list tree =
 												spacing ++ "Compute Add PC Zero RegE,\n" ++
 												spacing ++ "Push RegE,\n" ++ 
 												boolEx t1 list ++
-												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+3)) ++ ")),\n" ++
+												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+6)) ++ ")),\n" ++
 												(concat (map (toSprockell list) xs)) ++
+												spacing ++ "Pop RegA,\n" ++
 												spacing ++ "Pop RegE,\n" ++
+												spacing ++ "Push RegA,\n" ++
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
@@ -122,10 +124,12 @@ toSprockell list tree =
 												spacing ++ "Compute Add PC Zero RegE,\n" ++
 												spacing ++ "Push RegE,\n" ++ 
 												boolEx t1 list ++
-												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+(calcLen [t3])+3)) ++ ")),\n" ++
+												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+(calcLen [t3])+6)) ++ ")),\n" ++
 												(concat (map (toSprockell list) xs)) ++ 
 												toSprockell list t3 ++
+												spacing ++ "Pop RegA,\n" ++
 												spacing ++ "Pop RegE,\n" ++
+												spacing ++ "Push RegA,\n" ++
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
