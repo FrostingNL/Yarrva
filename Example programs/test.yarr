@@ -1,9 +1,10 @@
-fleet Fleet {
+fleet whileIncreaseOne {
 	
 	flagship() {
 		doubloon i be 0, Arrr!
-		navigate(i be 0. i be below 5. gift i) {
+		whirlpool(i be below 8) {
 			parrot i, Arrr!
+			gift i, Arrr!
 		}
 	}
 }
