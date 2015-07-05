@@ -1,9 +1,7 @@
 fleet Fleet {
 	flagship() {
-		doubloon i be 0, Arrr!
-		whirlpool(i below 5) {
+		navigate(doubloon i be 0. i be below 5. gift i) {
 			parrot i, Arrr!
-			gift i, Arrr!
 		}
 	}
 }

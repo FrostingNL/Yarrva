@@ -88,8 +88,9 @@ typeChecker list tree =
 		(IfNode t1 xs)						-> tCheckerMap xs list && checkType t1 Boo list
 		(IfElseNode t1 xs xs')				-> tCheckerMap xs list && typeChecker list xs' && checkType t1 Boo list
 		(WhileNode t1 xs)					-> tCheckerMap xs list && checkType t1 Boo list
-		(ForNode t1 t2 t3 xs)				-> tCheckerMap xs list && typeChecker list t1 && 
-								   			   typeChecker list t2 && typeChecker list t3
+		(ForNode t1 t2 t3 xs)				-> typeChecker newList t2 && typeChecker newList t3 && tCheckerMap xs newList
+											where
+												newList = (addToScope [t1] (concat list)): list
 		n@(FuncValNode t1 t2)				-> addToScope [n] [] /= []
 		_ 									-> True
 {-
@@ -287,7 +288,7 @@ inScope (((s2,_):tup):list) n@(VarNode s l c) 	| s == s2 || isString s || isNumb
 												| otherwise = inScope (tup:list) n
 inScope (((s2,_):tup):list) n@(DoFuncNode s _) 	| s == s2 = True
 												| otherwise = inScope (tup:list) n
-inScope list tree =
+inScope list tree = 
 	case tree of
 		(BoolExNode (Boolean t1)) 	| inScope list t1 -> True
 									| otherwise 	  -> scopeError (getValue t1)
@@ -299,14 +300,11 @@ inScope list tree =
 									| otherwise 	  -> scopeError (getValue t1)
 		(ReturnNode s t1)			| inScope list t1 -> True
 									| otherwise 	  -> scopeError (getValue t1)
-		(BootyNode t1 t2)			| not $ inScope list t1 -> scopeError (getValue t1) 
-									| not $ inScope list t2 -> scopeError (getValue t2)
+		(BootyNode t1 t2)			| not $ inScope list t2 -> scopeError (getValue t2)
 									| otherwise 	  		-> True
-		(DoubloonNode t1 t2) 		| not $ inScope list t1 -> scopeError (getValue t1) 
-									| not $ inScope list t2 -> scopeError (getValue t2)
+		(DoubloonNode t1 t2) 		| not $ inScope list t2 -> scopeError (getValue t2)
 									| otherwise 	  		-> True
-		(BoolNode t1 t2) 			| not $ inScope list t1 -> scopeError (getValue t1) 
-									| not $ inScope list t2 -> scopeError (getValue t2)
+		(BoolNode t1 t2) 			| not $ inScope list t2 -> scopeError (getValue t2)
 									| otherwise 	  		-> True
 		(AssignNode t1 t2)			| not $ inScope list t1 -> scopeError (getValue t1) 
 									| not $ inScope list t2 -> scopeError (getValue t2)
@@ -320,10 +318,12 @@ inScope list tree =
 		(FuncValNode t1 t2)			| not $ inScope list t1 -> scopeError (getValue t1) 
 									| not $ inScope list t2 -> scopeError (getValue t2)
 									| otherwise 	 		-> True
-		(ForNode t1 t2 t3 xs)		| not $ inScope list t1	-> scopeError (getValue t1) 
-									| not $ inScope list t2 -> scopeError (getValue t2)
-									| not $ inScope list t3 -> scopeError (getValue t3)
-									| otherwise				-> scopeM xs list 
+		(ForNode t1 t2 t3 xs)		| not $ inScope list t1	   	-> scopeError (getValue t1) 
+									| not $ inScope newList t2 	-> scopeError (getValue t2)
+									| not $ inScope newList t3 	-> scopeError (getValue t3)
+									| otherwise				   	-> scopeM xs newList
+									where
+										newList = (addToScopeSC [t1]): list 
 		(IfNode t1 xs)				| not $ inScope list t1 -> scopeError (getValue t1)
 									| otherwise 			-> scopeM xs list
 		(IfElseNode t1 xs t2)		| not $ inScope list t1 -> scopeError (getValue t1)

@@ -2,15 +2,15 @@ import Sprockell.System
 
 prog = [
        -- flagship()
+       -- navigate(doubloon i be 0. i be below 5. gift i)
        -- doubloon i be 0
        Const (0) RegA,
        Store RegA (Addr 2),
-       -- whirlpool(i below 5)
        Compute Add PC Zero RegE,
        Push RegE,
        Const (5) RegA,
        Load (Addr 2) RegB,
-       Compute GtE RegB RegA RegA,
+       Compute Gt RegB RegA RegA,
        Branch RegA (Rel(17)),
        -- parrot (i)
        Load (Addr 2) RegA,
