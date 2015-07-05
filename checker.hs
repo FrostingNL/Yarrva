@@ -40,7 +40,7 @@ checkUsage t@(s,p) tree =
 		(FuncValNode t1 t2)			-> usage t t1
 		(PrintNode t1)				-> usage t t1
 		(ReturnNode _ t1)			-> usage t t1
-		(DoFuncNode s2 xs)			-> s == s2
+		(DoFuncNode s2 xs)			-> s == s2 || uMap t xs
 		(IfNode t1 xs) 				| usage t t1 || uMap t xs				-> True
 									| otherwise 							-> False
 		(IfElseNode t1 xs xs') 		| usage t t1 || uMap t xs || usage t xs'-> True
@@ -82,7 +82,9 @@ typeChecker list tree =
 		(AssignNode t1 t2) 					-> checkAssignType t1 t2 list
 		(ElseNode xs)						-> tCheckerMap xs list
 		(ZupaNode s xs) 					-> tCheckerMap xs list 
-		(FuncNode s xs xs')					-> tCheckerMap xs list && tMap list xs
+		(FuncNode s xs xs')					-> tCheckerMap xs' list && tMap list xs
+		(IntFuncNode s xs xs')				-> tCheckerMap2 xs' xs list
+		(BoolFuncNode s xs xs')				-> tCheckerMap2 xs' xs list
 		(IfNode t1 xs)						-> tCheckerMap xs list && checkType t1 Boo list
 		(IfElseNode t1 xs xs')				-> tCheckerMap xs list && typeChecker list xs' && checkType t1 Boo list
 		(WhileNode t1 xs)					-> tCheckerMap xs list && checkType t1 Boo list
@@ -95,6 +97,7 @@ typeChecker list tree =
 -}
 tMap a b 		= and (map (typeChecker a) b)
 tCheckerMap a b = trace (show (addToScope a (concat b))) $ tMap ((addToScope a (concat b)): b) (getOtherNodes a)
+tCheckerMap2 a c b = trace ("A: " ++ show (a ++ c)) $ tMap ((addToScope (a ++ c) (concat b)): b) (getOtherNodes a)
 
 {-
 	The function which gets every node except declaration nodes. This function is used in the creation of the scope.
@@ -117,16 +120,21 @@ getOtherNodes (n:xs)					= n: getOtherNodes xs
 -}
 addToScope :: [Tree] -> [(String, Types)] -> [(String, Types)]
 addToScope [] _										= []
-addToScope ((BootyNode (VarNode s l c) t): xs) li	| checkType t Str [li] 						= (s, Str): addToScope xs (li ++ [(s,Str)])
+addToScope ((BootyNode (VarNode s l c) t): xs) li	| checkType t Str [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+													| checkType t Str [li] 						= (s, Str): addToScope xs (li ++ [(s,Str)])
 													| otherwise 								= incType t "String" l c 
-addToScope ((DoubloonNode (VarNode s l c) t): xs) li| checkType t Int [li]						= (s, Int): addToScope xs (li ++ [(s,Int)])
+addToScope ((DoubloonNode (VarNode s l c) t): xs) li| checkType t Int [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+													| checkType t Int [li]						= (s, Int): addToScope xs (li ++ [(s,Int)])
 													| otherwise 								= incType t "Integer" l c
-addToScope ((BoolNode (VarNode s l c) t): xs) li	| checkType t Boo [li]						= (s, Boo): addToScope xs (li ++ [(s,Boo)])
+addToScope ((BoolNode (VarNode s l c) t): xs) li	| checkType t Boo [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+													| checkType t Boo [li]						= (s, Boo): addToScope xs (li ++ [(s,Boo)])
 													| otherwise 								= incType t "Boolean" l c
-addToScope ((ArrayNode (VarNode s l c) t@(VarNode s2 l2 c2) xs): xs') li	
-													| and $ map (\x -> checkType x typ [li]) xs	= (s2, Arr typ): addToScope xs' (li ++ [(s2,Arr typ)])
+addToScope ((ArrayNode (VarNode s l c) t@(VarNode s2 l2 c2) xs): xs') li
+													| bool && inList s li						= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))	
+													| bool 										= (s2, Arr typ): addToScope xs' (li ++ [(s2,Arr typ)])
 													| otherwise 								= incType2 t s l2 c2
 													where
+														bool = and $ map (\x -> checkType x typ [li]) xs
 														typ = (getTypeFromString s)
 addToScope ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs) list
 													= (s, (getTypeFromString s2)): addToScope xs (list ++ [(s,(getTypeFromString s2))]) 
@@ -138,6 +146,8 @@ addToScope (_: xs) l								= addToScope xs l
 -}
 incType a s l c  = error ("Incorrect Type: " ++ (getValue a) ++ " is not a " ++ s ++ " ! Line:" ++ (show l) ++ ":" ++ (show c))
 incType2 a s l c = error ("Incorrect Type: Not all values of " ++ (getValue a) ++ " are " ++ s ++ "s ! Line:" ++ (show l) ++ ":" ++ (show c))
+inList :: String -> [(String, Types)] -> Bool
+inList a b = (elem (a,Int) b) || (elem (a,Str) b) || (elem (a,Boo) b) || (elem (a,Arr Int) b) || (elem (a,Arr Boo) b) || (elem (a,Arr Str) b) || (elem (a,Arr Str) b)
 
 {-
 	Checks 
@@ -170,6 +180,8 @@ checkType tree Int list =
 		(OpNode s t1 t2)					-> checkType t1 Int list && checkType t2 Int list 
 		(DoFuncNode s xs)					-> getType s 0 0 list == Int
 		(ArrayOpNode t1 t2)					-> checkType t1 Int list && checkType t2 Int list 		
+		(GiftNode t1)						-> checkType t1 Int list
+		(PlunderNode t1)					-> checkType t1 Int list
 		_									-> False
 
 checkType tree Str list =
@@ -284,12 +296,14 @@ inScope list tree =
 									| otherwise 			-> scopeM xs list
 		(WhileNode t1 xs)			| not $ inScope list t1 -> scopeError (getValue t1) 
 									| otherwise 			-> scopeM xs list 
-		(FuncNode s xs xs')			-> funcM xs xs' list
-		(DoFuncNode s xs)			-> scopeM2 list xs
+		(DoFuncNode s xs)			| not $ stringInScope s list -> scopeError s
+									| otherwise 				 -> scopeM2 list xs
+		(FuncNode s xs xs')			-> funcM xs xs' list 
 		(ArrayNode t1 t2 xs)		-> scopeM2 list xs 
 		(ElseNode xs)				-> scopeM xs list 
 		n@(ZupaNode s xs)			-> scopeM xs list  && usageM n n
 		(IntFuncNode s xs xs')		-> funcM xs xs' list
+		(BoolFuncNode s xs xs')		-> funcM xs xs' list
 		_							-> False
 usageM a b	= allT (map (\x -> checkUsage x a) (addAllToScope b))
 scopeM a b 	= scopeM2 ((addToScopeSC a): b) (getOtherNodes a)
@@ -333,6 +347,15 @@ getValue (DoubloonNode t1 t2) = "doubloon " ++ getValue t1 ++ " be " ++ getValue
 getValue (FuncValNode t1 t2) = getValue t1 ++ " " ++ getValue t2
 getValue (GiftNode t1) = "gift " ++ getValue t1
 getValue (DoFuncNode s xs) = s ++ "(" ++ (concat (map getValue xs)) ++ ")"
+getValue (IntFuncNode s _ _) = s
+getValue (BoolFuncNode s _ _) = s
+getValue (BoolExNode (Comp s t1 t2)) = getValue t1 ++ " " ++ s ++ " " ++ getValue t2
+getValue s = show s 
 
 allT = all (==True)
 anyT = any (==True)
+
+stringInScope :: String -> [[(String, Types)]] -> Bool
+stringInScope s [] = False
+stringInScope s ([]: rest) = stringInScope s rest
+stringInScope s (((s2,_): list): rest) = s == s2 || stringInScope s (list: rest)
