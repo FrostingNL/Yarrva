@@ -60,3 +60,17 @@ context7 = ZupaNode "Context" [DoubloonNode (VarNode "i" 2 9) (VarNode "1" 2 19)
 
 doContextTest :: Tree -> Bool
 doContextTest t = typeAndScopeChecker t
+    
+main = do
+    runSuite $ febTestSuite 2000 29
+    runSuite $ febTestSuite 2001 28
+    runSuite $ febTestSuite 2002 28
+    runSuite $ febTestSuite 2003 28
+    runSuite $ febTestSuite 2004 29
+    runSuite $ primeTestSuite 14 0
+    runSuite $ primeTestSuite 13 1
+    result <- try (runSuite $ divBy0TestSuite) :: IO (Either SomeException ())
+    case result of
+        Left ex  -> putStrLn $ "Caught exception: " ++ show ex
+        Right val -> putStrLn $ "The answer was: " ++ show val
+    return ()

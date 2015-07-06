@@ -194,7 +194,8 @@ checkType tree Int list =
 											where
 												typ = getType s l c list
 		(OpNode s t1 t2)					-> checkType t1 Int list && checkType t2 Int list 
-		(DoFuncNode s xs)					-> getType s 0 0 list == Int
+		(DoFuncNode s xs)					| getType s 0 0 list == Int -> True
+											| otherwise 				-> wrongFuncType s "Integer" 
 		(ArrayOpNode t1 t2)					-> checkType t1 Int list && checkType t2 Int list 		
 		(GiftNode t1)						-> checkType t1 Int list
 		(PlunderNode t1)					-> checkType t1 Int list
@@ -207,7 +208,8 @@ checkType tree Str list =
 											where
 												typ = getType s l c list
 		(OpNode "+" t1 t2)					-> checkType t1 Str list && checkType t2 Str list 
-		(DoFuncNode s xs)					-> getType s 0 0 list == Str
+		(DoFuncNode s xs)					| getType s 0 0 list == Str -> True
+											| otherwise 				-> wrongFuncType s "String" 
 		(ArrayOpNode t1 t2)					-> checkType t1 Str list && checkType t2 Str list 		
 		_									-> False
 
@@ -223,7 +225,8 @@ checkType tree Boo list =
 		(BoolExNode (Boolean t1))			| checkType t1 Boo list									-> True
 											| otherwise												-> wrongType t1 "Boolean" (getL t1) (getC t1)
 		(BoolExNode (Comp _ t1 t2)) 		-> checkType t1 Int list && checkType t1 Int list
-		(DoFuncNode s xs)					-> getType s 0 0 list == Boo
+		(DoFuncNode s xs)					| getType s 0 0 list == Boo -> True
+											| otherwise 				-> wrongFuncType s "Boolean" 
 		(ArrayOpNode t1 t2)					-> checkType t1 Boo list && checkType t2 Boo list 	
 		_									-> False
 
@@ -234,13 +237,15 @@ checkType tree (Arr t) list =
 											where
 												typ = getType s l c list
 		(OpNode "+" t1 t2)					-> checkType t1 t list && checkType t2 t list 
-		(DoFuncNode s xs)					-> getType s 0 0 list == t
+		(DoFuncNode s xs)					| getType s 0 0 list == t -> True
+											| otherwise 			  -> wrongFuncType s "Array" 
 		(ArrayOpNode t1 t2)					-> checkType t1 t list && checkType t2 t list 		
 		_									-> False
 {-
 	Helper Function for checkType.
 -}
 wrongType a b c d	= error ("Incorrect Type: " ++ (getS a) ++ " is not an " ++ b ++ "! Line: " ++ (show c) ++ ":" ++ (show d))
+wrongFuncType a b   = error ("Incorrect Type: " ++ a ++ " does not return an " ++ b ++ "!")
 getL (VarNode _ l _) = l
 getL _ 				 = 0 
 getC (VarNode _ _ c) = c

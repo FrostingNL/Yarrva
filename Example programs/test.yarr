@@ -1,0 +1,23 @@
+fleet Program {
+	
+	orderShip sameNumber(doubloon x, doubloon y) {
+		parley(x be y) {
+			avast Aye, Arrr!
+		} heave {
+			avast Nay, Arrr!
+		}
+	}
+
+
+	flagship() {
+		doubloon a be 4, Arrr!
+		doubloon b be 4, Arrr!
+		doubloon result be 0, Arrr!
+		result be sameNumber(a, b), Arrr!
+		parrot result, Arrr!
+
+		b be 5, Arrr!
+		result be sameNumber(a,b), Arrr!
+		parrot result, Arrr!
+	}
+}

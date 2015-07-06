@@ -10,7 +10,7 @@ import Parse
 import Grammar
 import Checker
 
-main = start "Tests/feb.yarr"
+main = start "Example Programs/test.yarr"
 
 {-
 	The main function, which starts the convertor.
