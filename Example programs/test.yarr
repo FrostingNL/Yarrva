@@ -1,41 +1,36 @@
 fleet Program {
-	order doWhile be Aye, Arrr!
-
-	doubloonShip countDownTo(doubloon x) {
-		parley(x be below 9) {
-			whirlpool(doWhile) {
-				parley(x above 9) {
-					doWhile be Nay, Arrr!
-				}
-				heave {
-					parrot x, Arrr!
-					plunder x, Arrr!
-				}
+	
+	doubloonShip function(doubloon a, doubloon b) {
+		orderShip comp(doubloon x, doubloon y) {
+			order temp be Nay, Arrr!
+			parley(x be y) {
+				temp be Aye, Arrr!
 			}
+			avast temp, Arrr!
 		}
-	}
 
-	orderShip isPrime(doubloon num) {
-		doubloon temp be 0, Arrr!
-		order res be Aye, Arrr!
-		navigate(doubloon i be 2. i be below num. gift i) {
-			temp be num % i, Arrr!
-			parley(temp be 0) {
-				parley(i be num) { }
-				heave { 
-					res be Nay, Arrr!
-				}
-			}
+		order d be Nay, Arrr!
+		doubloon c be a+b, Arrr!
+		b be c - b, Arrr!
+
+		d be comp(a,b), Arrr!
+		parley(d) {
+			parrot Aye, Arrr!
 		}
-		avast res, Arrr!
+		heave {
+			parrot Nay, Arrr!
+		}
+
+		navigate(b be 0. b be below a. gift b) {
+			parrot b, Arrr!
+			plunder c, Arrr!
+		}
+		avast c, Arrr!
 	}
 
 	flagship() {
-		doubloon x be 3, Arrr!
-		countDownTo(x), Arrr!
-		>> x is now 9, due to call-by-reference <<
-		parrot isPrime(x), Arrr!
-		x be 13, Arrr!
-		parrot isPrime(x), Arrr!
+		doubloon e be 1, Arrr!
+		doubloon r be 2, Arrr!
+		parrot function(e,r), Arrr!
 	}
 }
