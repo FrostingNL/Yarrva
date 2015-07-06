@@ -1,10 +1,18 @@
-fleet whileIncreaseOne {
-	
+fleet showDoubloonFunc {
+
+	doubloonShip upNumber(doubloon x, doubloon y) {
+	 	doubloonShip addFive(doubloon c) {
+	 		doubloon temp be c + 5, Arrr!
+	 		avast temp, Arrr!
+	 	}
+		doubloon result be x + y, Arrr!
+		avast addFive(result), Arrr!
+	}
+
+
 	flagship() {
-		doubloon i be 0, Arrr!
-		whirlpool(i be below 8) {
-			parrot i, Arrr!
-			gift i, Arrr!
-		}
+		doubloon x be 3, Arrr!
+		doubloon y be 5, Arrr!
+		parrot upNumber(x, y), Arrr!
 	}
 }
