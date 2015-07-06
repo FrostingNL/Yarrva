@@ -1,0 +1,16 @@
+fleet FebCalc {
+	doubloonShip feb(doubloon year) {
+		doubloon temp be year % 4, Arrr!
+		parley(temp be 0) {
+			avast 29, Arrr!
+		}
+		heave {
+			avast 28, Arrr!
+		}
+	}
+
+	flagship() {
+		doubloon y be 2032, Arrr!
+		feb(2032), Arrr!
+	}
+}

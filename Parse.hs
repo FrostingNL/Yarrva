@@ -9,7 +9,6 @@ import FPPrac.Trees
 
 doPrint = False
 
-
 -- Embedded language for alphabet: the first 10 clauses should not be removed, the last three can be replaced by your own.
 data Alphabet =	  Symbol     String		-- Token given ("char" specific for this example)
 		| Keyword    String		-- A given string, but included in the parsetree

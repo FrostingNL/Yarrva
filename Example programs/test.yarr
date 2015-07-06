@@ -1,18 +1,6 @@
 fleet showDoubloonFunc {
-
-	doubloonShip upNumber(doubloon x, doubloon y) {
-	 	doubloonShip addFive(doubloon c) {
-	 		doubloon temp be c + 5, Arrr!
-	 		avast temp, Arrr!
-	 	}
-		doubloon result be x + y, Arrr!
-		avast addFive(result), Arrr!
-	}
-
-
 	flagship() {
-		doubloon x be 1, Arrr!
-		doubloon y be 3, Arrr!
-		parrot upNumber(x, y), Arrr!
+		doubloon x be 15, Arrr!
+		parrot x, Arrr!
 	}
 }
