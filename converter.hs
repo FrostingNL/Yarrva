@@ -10,7 +10,7 @@ import Parse
 import Grammar
 import Checker
 
-main = start "Example programs/test.yarr"
+main = start "Tests/prime.yarr"
 
 {-
 	The main function, which starts the convertor.
@@ -22,16 +22,18 @@ start input
 	= do
 		inHandle <- openFile input ReadMode  
 		contents <- hGetContents inHandle
-		--putStrLn (contents)
+		putStrLn (contents)
 		outHandle <- openFile "out.hs" WriteMode
-		if typeAndScopeChecker $ convert $ parse grammar Program $ tokens contents
+		if typeAndScopeChecker $ conv contents
 			then do 
-				hPutStr outHandle $ toSprockell [] $ convert $ parse grammar Program $ tokens contents
+				hPutStr outHandle $ toSprockell [] $ conv contents
 				hClose inHandle
 				hClose outHandle
 			else do
 				hClose inHandle
 				hClose outHandle
+	where
+		conv a = convert $ parse grammar Program $ tokens a
 
 {-
 	The main converter function.
@@ -40,9 +42,10 @@ start input
 		Returns:	A String containing a Haskell File with the Spril instructions.
 -}
 toSprockell :: [(String, Int)] -> Tree -> String
-toSprockell list tree =
+toSprockell list tree = trace (show tree) $ 
 	case tree of
-		(DoubloonNode t1 t2)-> 	spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
+		(DoubloonNode t1 t2)->	trace ("DOULOONL ") $  
+								spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
 								printAndGetNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 		
@@ -54,7 +57,8 @@ toSprockell list tree =
 								printAndGetNode list t2 ++ " RegA,\n" ++
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
  
-		(OpNode s t1 t2)	->	(getValue t1) ++ " " ++ s ++ " " ++ (getValue t2) ++ "\n" ++
+		(OpNode s t1 t2)	->	trace ("SSDS: " ++ (show list)) $ 
+								(getValue t1) ++ " " ++ s ++ " " ++ (getValue t2) ++ "\n" ++
 								spacing ++ getNode list t1 ++ " RegB,\n" ++
 								spacing ++ getNode list t2 ++ " RegC,\n" ++
 								spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegC RegA,\n" ++
@@ -68,7 +72,7 @@ toSprockell list tree =
        							spacing ++ "Read (Addr 0x0),\n" ++
        							spacing ++ "Receive RegB,\n"
 
-		(ZupaNode s xs)		-> 	"import Sprockell.System\n\nprog = [\n" ++ 
+		(ZupaNode s xs)		->  "import Sprockell.System\n\nprog = [\n" ++ 
 								(concat (map (toSprockell (addToList xs 0)) xs)) ++ 
 								spacing ++ "-- END\n" ++ 
 								spacing ++ "EndProg\n" ++ 
@@ -138,8 +142,7 @@ toSprockell list tree =
 		n@(FuncNode "flagship" xs xs')		-> 	spacing ++ "-- flagship()\n" ++
 												(concat (map (toSprockell list) xs'))
 
-		n@(IntFuncNode s xs xs')			->	trace ("\n" ++ (show xs'))
-												spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+		n@(IntFuncNode s xs xs')			->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const 3 RegA,\n" ++
 												spacing ++ "Compute Add PC RegA RegE,\n" ++ 
 												spacing ++ "Store RegE (Addr " ++ (show (getInt list n)) ++ "),\n" ++ 
@@ -169,20 +172,6 @@ toSprockell list tree =
 												spacing ++ "Jump (Ind RegA),\n"
 
 		_					-> 	""
-
-{-
-	Helper Function of toSprockell - Prints a single Char to Standard Out.
-		Argument 1: The list of memory locations.
-		Argument 2: The char to print.
-		Returns:	String of Spril Instructions instructing a Print function.
--}
-printFunc :: [(String, Int)] -> Char -> String
-printFunc list c =	spacing ++ "Const (ord '" ++ [c] ++ "') RegA,\n" ++
-					spacing ++ "Const (ord '0') RegB,\n" ++ 
-					spacing ++ "Compute Add RegA RegB RegB,\n" ++
-   					spacing ++ "Write RegB stdio,\n" ++
-   					spacing ++ "Read (Addr 0x0),\n" ++
-   					spacing ++ "Receive RegB,\n"
 
 {-
 	Helper Function of toSprockell - Stores an Array to memory.
@@ -254,7 +243,7 @@ calcLen ((PrintNode t1): xs)								= 6 + calcLen [t1] + calcLen xs
 calcLen ((IntFuncNode _ t1 t2): xs)							= 6 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((BoolFuncNode _ t1 t2): xs)							= 6 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((FuncValNode t1 t2): xs) 							= 3 + calcLen xs
-calcLen ((DoFuncNode _ xs): xs')							= trace ("DFN: " ++ show (5 + calcLen xs)) 5 + calcLen xs + calcLen xs'
+calcLen ((DoFuncNode _ xs): xs')							= 5 + calcLen xs + calcLen xs'
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
 calcLen ((ReturnNode _ (VarNode _ _ _)): xs)				= 4 + calcLen xs
 calcLen ((ReturnNode _ t): xs) 								= 4 + calcLen [t] + calcLen xs
@@ -301,7 +290,7 @@ printAndGetNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 -}
 getNode :: [(String, Int)] -> Tree -> String
 getNode list t@(VarNode _ _ _)	= load list t
-getNode list t 					= trace (show t) $ toSprockell list t ++ spacing ++ "Pop "
+getNode list t 					= toSprockell list t ++ spacing ++ "Pop "
 
 {-
 	Helper Function of toSprockell - Loads a Indetifier from Memory or loads a Constant.
@@ -373,7 +362,7 @@ addToList ((IntFuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ add
 													where
 														list = addToList xs (i+1)
 														list'= addToList xs' (getNew list)
-addToList ((BoolFuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToList xs'' (getNew (list ++ list')))
+addToList ((BoolFuncNode s xs xs'): xs'') i 		= (s, i+1):  (list ++ list' ++ addToList xs'' (getNew (list ++ list')))
 													where
 														list = addToList xs (i+1)
 														list'= addToList xs' (getNew list)
