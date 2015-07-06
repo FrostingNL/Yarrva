@@ -1,6 +1,0 @@
-fleet showDoubloonFunc {
-	flagship() {
-		doubloon x be 15, Arrr!
-		parrot x, Arrr!
-	}
-}
