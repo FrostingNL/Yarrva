@@ -1,3 +1,5 @@
+module Syntax where
+
 import Data.Char
 import Data.List
 import Parse

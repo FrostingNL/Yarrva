@@ -54,6 +54,8 @@ checkUsage t@(s,p) tree =
 		(FuncNode s' xs' xs) 		| uMap t xs && falseMap t xs' 			-> True
 									| otherwise 							-> False
 		(IntFuncNode s' xs' xs)		| uMap t xs && falseMap t xs' 			-> True
+									| otherwise 							-> False
+		(BoolFuncNode s' xs' xs)	| uMap t xs && falseMap t xs' 			-> True
 									| otherwise 							-> False							
 		(ZupaNode _ xs)				| uMap t xs								-> True
 									| otherwise 							-> warning s
@@ -98,7 +100,7 @@ typeChecker list tree =
 -}
 tMap a b 		= and (map (typeChecker a) b)
 tCheckerMap a b = trace (show (addToScope a (concat b))) $ tMap ((addToScope a (concat b)): b) (getOtherNodes a)
-tCheckerMap2 a c b = trace ("A: " ++ show (a ++ c)) $ tMap ((addToScope (a ++ c) (concat b)): b) (getOtherNodes a)
+tCheckerMap2 a c b = trace ("A: " ++ show (c ++ a)) $ tMap ((addToScope (c ++ a) (concat b)): b) (getOtherNodes a)
 
 {-
 	The function which gets every node except declaration nodes. This function is used in the creation of the scope.
@@ -124,7 +126,7 @@ addToScope [] _										= []
 addToScope ((BootyNode (VarNode s l c) t): xs) li	| checkType t Str [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
 													| checkType t Str [li] 						= (s, Str): addToScope xs (li ++ [(s,Str)])
 													| otherwise 								= incType t "String" l c 
-addToScope ((DoubloonNode (VarNode s l c) t): xs) li| checkType t Int [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+addToScope ((DoubloonNode (VarNode s l c) t): xs) li| trace ("LIST: " ++ (show s)) $ checkType t Int [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
 													| checkType t Int [li]						= (s, Int): addToScope xs (li ++ [(s,Int)])
 													| otherwise 								= incType t "Integer" l c
 addToScope ((BoolNode (VarNode s l c) t): xs) li	| checkType t Boo [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
@@ -138,7 +140,7 @@ addToScope ((ArrayNode (VarNode s l c) t@(VarNode s2 l2 c2) xs): xs') li
 														bool = and $ map (\x -> checkType x typ [li]) xs
 														typ = (getTypeFromString s)
 addToScope ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs) list
-													= (s, (getTypeFromString s2)): addToScope xs (list ++ [(s,(getTypeFromString s2))]) 
+													= trace ("SSS" ++ s) $ (s, (getTypeFromString s2)): addToScope xs (list ++ [(s,(getTypeFromString s2))]) 
 addToScope ((IntFuncNode s _ _): xs) l				= (s, Int): addToScope xs (l ++ [(s,Int)])
 addToScope ((BoolFuncNode s _ _): xs) l				= (s, Boo): addToScope xs (l ++ [(s,Boo)])
 addToScope (_: xs) l								= addToScope xs l
@@ -190,7 +192,7 @@ checkType tree Int list =
 		n@(VarNode s l c)  					| and (map (isNumber) s) || typ == Int || typ == Arr Int 	-> True
 											| otherwise													-> wrongType n "Integer" l c 
 											where
-												typ = getType s l c list
+												typ = trace ("SDSDSDS" ++ (show list)) $ getType s l c list
 		(OpNode s t1 t2)					-> checkType t1 Int list && checkType t2 Int list 
 		(DoFuncNode s xs)					-> getType s 0 0 list == Int
 		(ArrayOpNode t1 t2)					-> checkType t1 Int list && checkType t2 Int list 		

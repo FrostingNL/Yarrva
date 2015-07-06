@@ -1,35 +1,59 @@
 import Sprockell.System
 
 prog = [
-       -- flagship()
-       -- navigate(doubloon i be 0. i be below 5. gift i)
-       -- doubloon i be 0
-       Const (0) RegA,
-       Store RegA (Addr 2),
-       Compute Add PC Zero RegE,
-       Push RegE,
-       Const (5) RegA,
+       -- feb(year Int)
+       Const 3 RegA,
+       Compute Add PC RegA RegE,
+       Store RegE (Addr 1),
+       Jump (Rel(25)),
+       Pop RegA,
+       Load (Deref RegA) RegB,
+       Store RegB (Addr 2),
+       -- doubloon temp be year % 4
        Load (Addr 2) RegB,
-       Compute Gt RegB RegA RegA,
-       Branch RegA (Rel(17)),
-       -- parrot (i)
-       Load (Addr 2) RegA,
+       Const (4) RegC,
+       Compute Mod RegB RegC RegA,
+       Push RegA,
+       Pop  RegA,
+       Store RegA (Addr 4),
+       -- parley(temp be 0)
+       Const (0) RegA,
+       Load (Addr 4) RegB,
+       Compute NEq RegB RegA RegA,
+       Branch RegA (Rel(6)),
+       -- avast 28
+       Pop RegE,
+       Const (28) RegA,
+       Push RegA,
+       Push RegE,
+       Jump (Rel(5)),
+       -- heave
+       -- avast 29
+       Pop RegE,
+       Const (29) RegA,
+       Push RegA,
+       Push RegE,
+       Pop RegE,
+       Jump (Ind RegE),
+       -- flagship()
+       -- doubloon year be 2001
+       Const (2001) RegA,
+       Store RegA (Addr 2),
+       -- parrot (feb(year))
+              -- feb(year)
+       Const 6 RegA,
+       Compute Add PC RegA RegE,
+       Push RegE,
+       Const 2 RegA,
+       Push RegA,
+       Load (Addr 1) RegA,
+       Jump (Ind RegA),
+       Pop  RegA,
        Const (ord '0') RegB,
        Compute Add RegA RegB RegB,
        Write RegB stdio,
        Read (Addr 0x0),
        Receive RegB,
-       -- gift i
-       Load (Addr 2) RegA,
-       Const 1 RegB,
-       Compute Add RegA RegB RegA,
-       Store RegA (Addr 2),
-       Push RegA,
-       Pop RegA,
-       Pop RegE,
-       Push RegA,
-       Jump (Ind RegE),
-       Pop RegE,
        -- END
        EndProg
        ]

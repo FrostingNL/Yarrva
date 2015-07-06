@@ -44,6 +44,7 @@ grammar nt = case nt of 																			-- The Grammar sorted by occurence
 				[minus],																						-- Self Explanatory
 				[times],																						-- Self Explanatory
 				[divide],																						-- Self Explanatory
+				[modulo],																						-- Self Explanatory
 				[notSym]]																						-- Self Explanatory
 	Type	-> [[SyntCat Nmbr],																					-- A number
 				[SyntCat Bool],																					-- A boolean
@@ -131,6 +132,7 @@ plus    = Symbol "+"
 minus   = Symbol "-"
 times   = Symbol "*"
 divide  = Symbol "/"
+modulo  = Symbol "%"
 notSym  = Symbol "~"
 colon   = Symbol ":"
 point	= Symbol "."
@@ -189,7 +191,7 @@ tokenizer state l c str@(x:xs) =
 					| otherwise						-> tokenizer START   l c str
 					-- SYM STATE
 		SYM 		| x == '-' && isNumber (head xs)-> tokenizer NUM 	 l c str
-					| elem x "+*/"	 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
+					| elem x "+*/%"	 				-> (Op, [x], l, c) 		    : tokenizer START l (c+1) xs
 			   		| otherwise 					-> (getSymbol x, [x], l, c) : tokenizer START l (c+1) xs
 			   		-- BOOL STATE
 		BOOL 		| isBoolean bool 				-> (Bool, bool, l, c)    : tokenizer BOOL 		l (calcC c str) (getRest str)
@@ -423,7 +425,7 @@ getNum (x:xs)
 getWord :: String -> String
 getWord [] = []
 getWord (x:xs)
-	| elem x " +-*/,()." = []
+	| elem x " +-*/%,()." = []
 	| otherwise = x: getWord xs
 
 {-
@@ -431,7 +433,7 @@ getWord (x:xs)
 -}
 getIdf :: String -> String
 getIdf [] = []
-getIdf (x:xs) | elem x (" +-*/,().[]") = []
+getIdf (x:xs) | elem x (" +-*/%,().[]") = []
 			  | otherwise = x : getIdf xs
 
 {-
@@ -439,7 +441,7 @@ getIdf (x:xs) | elem x (" +-*/,().[]") = []
 -}
 rmIdf :: String -> String
 rmIdf [] = []
-rmIdf (x:xs) | elem x (" +-*/,().[]") = (x:xs)
+rmIdf (x:xs) | elem x (" +-*/%,().[]") = (x:xs)
 			 | otherwise = rmIdf xs
 
 {-
@@ -464,7 +466,7 @@ rmUpTo (s:str) chars | elem s chars = (s:str)
 getRest :: String -> String
 getRest [] = []
 getRest (x:xs)
-	| elem x ",+-*/()." = (x:xs)
+	| elem x ",+-*/%()." = (x:xs)
 	| x == ' ' = (x:xs)
 	| otherwise = getRest xs
 
@@ -534,6 +536,7 @@ allSymbols = [ (lpar, '('),
 				(minus, '-'),
 				(times,  '*'),
 				(divide,  '/'),
+				(modulo,  '%'),
 				(notSym,  '~'),
 				(colon,  ':'),
 				(point,  '.'),

@@ -98,9 +98,8 @@ toSprockell list tree =
 
 		(IfElseNode (BoolExNode t1) xs xs')	-> 	spacing ++ "-- parley(" ++ boolText t1 ++ ")\n" ++ 
 												boolEx t1 list ++
-												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+3)) ++ ")),\n" ++
+												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+2)) ++ ")),\n" ++
 												(concat (map (toSprockell list) xs)) ++ 
-												spacing ++ "Jump (Rel(" ++ (show ((calcLen [xs'])+1)) ++ ")),\n" ++ 
 												toSprockell list xs'
 
 		(ElseNode xs)						->	spacing ++ "Jump (Rel(" ++ (show ((calcLen xs)+1)) ++ ")),\n" ++ 
@@ -151,6 +150,17 @@ toSprockell list tree =
 												(concat (map (toSprockell list) xs')) ++
 												spacing ++ "Pop RegE,\n" ++
 												spacing ++ "Jump (Ind RegE),\n"
+
+		n@(BoolFuncNode s xs xs')			->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+												spacing ++ "Const 3 RegA,\n" ++
+												spacing ++ "Compute Add PC RegA RegE,\n" ++ 
+												spacing ++ "Store RegE (Addr " ++ (show (getInt list n)) ++ "),\n" ++ 
+												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+(calcLen xs)+3)) ++ ")),\n" ++
+												popFunc list xs ++ 
+												(concat (map (toSprockell list) xs')) ++
+												spacing ++ "Pop RegE,\n" ++
+												spacing ++ "Jump (Ind RegE),\n"
+
 
 		n@(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const " ++ (show ((calcLen xs)+4)) ++ " RegA,\n" ++ 
@@ -244,6 +254,7 @@ calcLen ((PlunderNode t1): xs)								= 5 + calcLen xs
 calcLen ((PrintNode (VarNode _ _ _)): xs)					= 6 + calcLen xs
 calcLen ((PrintNode t1): xs)								= 6 + calcLen [t1] + calcLen xs
 calcLen ((IntFuncNode _ t1 t2): xs)							= 6 + calcLen t1 + calcLen t2 + calcLen xs
+calcLen ((BoolFuncNode _ t1 t2): xs)							= 6 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((FuncValNode t1 t2): xs) 							= 3 + calcLen xs
 calcLen ((DoFuncNode _ xs): xs')							= 5 + calcLen xs + calcLen xs'
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
@@ -314,6 +325,7 @@ getOp "+" _ = "Add"
 getOp "-" _ = "Sub"
 getOp "*" _ = "Mul"
 getOp "/" _ = "Div"
+getOp "%" _ = "Mod"
 getOp "be" False = "NEq"
 getOp "be" True  = "Equal"
 getOp "below" False = "GtE"
@@ -362,6 +374,10 @@ addToList ((IntFuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ add
 													where
 														list = addToList xs (i+1)
 														list'= addToList xs' (getNew list)
+addToList ((BoolFuncNode s xs xs'): xs'') i 			= (s, i+1):  (list ++ list' ++ addToList xs'' (getNew (list ++ list')))
+													where
+														list = addToList xs (i+1)
+														list'= addToList xs' (getNew list)
 addToList ((FuncValNode t1 t2): xs) i 				= ((getValue t1), (i+1)): addToList xs (i+1)
 addToList ((PrintNode xs): xs'') i 					= addToList xs'' (i-1)
 addToList ((ReturnNode _ _): xs) i 					= addToList xs i
@@ -387,6 +403,8 @@ getInt [] _ 							= 0
 getInt ((s,i):list) n@(VarNode nS _ _)	| s == nS	= i
 										| otherwise = getInt list n
 getInt ((s,i):list) n@(IntFuncNode nS _ _)	| s == nS	= i
+										| otherwise = getInt list n
+getInt ((s,i):list) n@(BoolFuncNode nS _ _)	| s == nS	= i
 										| otherwise = getInt list n
 getInt ((s,i):list) n@(DoFuncNode nS _)	| s == nS	= i
 										| otherwise = getInt list n

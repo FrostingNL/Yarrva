@@ -1,7 +1,18 @@
-fleet Fleet {
-	flagship() {
-		navigate(doubloon i be 0. i be below 5. gift i) {
-			parrot i, Arrr!
+fleet showDoubloonFunc {
+
+	doubloonShip feb(doubloon year) {
+		doubloon temp be year % 4, Arrr!
+		parley(temp be 0) {
+			avast 28, Arrr!
 		}
+		heave {
+			avast 29, Arrr!
+		}
+	}
+
+
+	flagship() {
+		doubloon year be 2001, Arrr!
+		parrot feb(year), Arrr!
 	}
 }
