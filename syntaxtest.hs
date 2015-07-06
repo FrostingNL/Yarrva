@@ -23,6 +23,14 @@ failSyntax3 = unlines [	"fleet Syntax {",
 				  	    "}"
 				  	  ]
 
+failSyntax4 = unlines ["fleet Syntax {",
+							"doubloonShip a(doubloon i) {",
+								"whirlpool() { }",
+							"}",
+							"flagship() { }",
+						"}"
+						]
+
 succesSyntax1 = unlines ["fleet Syntax {",
 							"doubloon a be 1, Arrr!",
 							"flagship() { }",
@@ -101,17 +109,8 @@ syntax6Tree   = 		ZupaNode "Syntax" [IntFuncNode "a" [FuncValNode (VarNode "o" 1
 															  ],
 															  FuncNode "flagship" [] []]
 
-syntaxTest :: String -> Bool -> IO Bool
-syntaxTest s b = do
-    result <- try (return (parse grammar Program $ tokens s)) :: IO (Either SomeException ParseTree)
-    case result of
-        Left ex  -> return False
-        Right val -> return ((val /= (PLeaf ((Keyword "PH"), "PH", 0, 0))) == b)
-
-
-allSyntaxTests :: [IO Bool]
-allSyntaxTests = [syntaxTest failSyntax1 False, syntaxTest failSyntax2 False, syntaxTest failSyntax3 False, 
-				  syntaxTest succesSyntax1 True, syntaxTest succesSyntax2 True, syntaxTest succesSyntax3 True, syntaxTest succesSyntax4 True, syntaxTest succesSyntax5 True, syntaxTest succesSyntax6 True]
+syntaxTest :: String -> Bool
+syntaxTest s = (parse grammar Program $ tokens s) /= PLeaf (Program, "", 0, 0)
 
 compareTree :: String -> Tree -> Bool
 compareTree s tree = (convert (parse grammar Program (tokens s))) == tree

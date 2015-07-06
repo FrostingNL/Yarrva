@@ -76,20 +76,20 @@ falseMap a b= all (==False) (map (checkUsage a) b)
 typeChecker :: [[(String, Types)]] -> Tree -> Bool
 typeChecker list tree = 
 	case tree of
-		n@(OpNode "+" t1 t2)				-> checkType n  Int list || checkType n Str list
-		n@(OpNode s t1 t2)					-> checkType n  Int list
-		n@(BoolExNode t1)					-> checkType n  Boo list
-		(GiftNode t1)						-> checkType t1 Int list
-		(PlunderNode t1)					-> checkType t1 Int list
+		n@(OpNode "+" t1 t2)				-> isType n  Int list || isType n Str list
+		n@(OpNode s t1 t2)					-> isType n  Int list
+		n@(BoolExNode t1)					-> isType n  Boo list
+		(GiftNode t1)						-> isType t1 Int list
+		(PlunderNode t1)					-> isType t1 Int list
 		(AssignNode t1 t2) 					-> checkAssignType t1 t2 list
 		(ElseNode xs)						-> tCheckerMap xs list
 		(ZupaNode s xs) 					-> tCheckerMap xs list 
 		(FuncNode s xs xs')					-> tCheckerMap xs' list && tMap list xs
 		(IntFuncNode s xs xs')				-> tCheckerMap2 xs' xs list
 		(BoolFuncNode s xs xs')				-> tCheckerMap2 xs' xs list
-		(IfNode t1 xs)						-> tCheckerMap xs list && checkType t1 Boo list
-		(IfElseNode t1 xs xs')				-> tCheckerMap xs list && typeChecker list xs' && checkType t1 Boo list
-		(WhileNode t1 xs)					-> tCheckerMap xs list && checkType t1 Boo list
+		(IfNode t1 xs)						-> tCheckerMap xs list && isType t1 Boo list
+		(IfElseNode t1 xs xs')				-> tCheckerMap xs list && typeChecker list xs' && isType t1 Boo list
+		(WhileNode t1 xs)					-> tCheckerMap xs list && isType t1 Boo list
 		(ForNode t1 t2 t3 xs)				-> typeChecker newList t2 && typeChecker newList t3 && tCheckerMap xs newList
 											where
 												newList = (addToScope [t1] (concat list)): list
@@ -99,8 +99,8 @@ typeChecker list tree =
 	Helper functions for typeChecker.
 -}
 tMap a b 		= and (map (typeChecker a) b)
-tCheckerMap a b = tMap ((addToScope a (concat b)): b) (getOtherNodes a)
-tCheckerMap2 a c b = tMap ((addToScope (c ++ a) (concat b)): b) (getOtherNodes a)
+tCheckerMap a b = trace (show (addToScope a (concat b))) $ 				tMap ((addToScope a (concat b)): b) (getOtherNodes a)
+tCheckerMap2 a c b = trace (show (addToScope (c ++ a) (concat b))) $ 	tMap ((addToScope (c ++ a) (concat b)): b) (getOtherNodes a)
 
 {-
 	The function which gets every node except declaration nodes. This function is used in the creation of the scope.
@@ -123,21 +123,21 @@ getOtherNodes (n:xs)					= n: getOtherNodes xs
 -}
 addToScope :: [Tree] -> [(String, Types)] -> [(String, Types)]
 addToScope [] _										= []
-addToScope ((BootyNode (VarNode s l c) t): xs) li	| checkType t Str [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
-													| checkType t Str [li] 						= (s, Str): addToScope xs (li ++ [(s,Str)])
+addToScope ((BootyNode (VarNode s l c) t): xs) li	| isType t Str [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+													| isType t Str [li] 						= (s, Str): addToScope xs (li ++ [(s,Str)])
 													| otherwise 								= incType t "String" l c 
-addToScope ((DoubloonNode (VarNode s l c) t): xs) li| checkType t Int [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
-													| checkType t Int [li]						= (s, Int): addToScope xs (li ++ [(s,Int)])
+addToScope ((DoubloonNode (VarNode s l c) t): xs) li| trace (show li) $  isType t Int [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+													| isType t Int [li]						= (s, Int): addToScope xs (li ++ [(s,Int)])
 													| otherwise 								= incType t "Integer" l c
-addToScope ((BoolNode (VarNode s l c) t): xs) li	| checkType t Boo [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
-													| checkType t Boo [li]						= (s, Boo): addToScope xs (li ++ [(s,Boo)])
+addToScope ((BoolNode (VarNode s l c) t): xs) li	| isType t Boo [li] && inList s li		= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))
+													| isType t Boo [li]						= (s, Boo): addToScope xs (li ++ [(s,Boo)])
 													| otherwise 								= incType t "Boolean" l c
 addToScope ((ArrayNode (VarNode s l c) t@(VarNode s2 l2 c2) xs): xs') li
 													| bool && inList s li						= error ("Declaration: " ++ s ++ " has already been declared! Line:" ++ (show l) ++ ":" ++ (show c))	
 													| bool 										= (s2, Arr typ): addToScope xs' (li ++ [(s2,Arr typ)])
 													| otherwise 								= incType2 t s l2 c2
 													where
-														bool = and $ map (\x -> checkType x typ [li]) xs
+														bool = and $ map (\x -> isType x typ [li]) xs
 														typ = (getTypeFromString s)
 addToScope ((FuncValNode (VarNode s l c) (VarNode s2 l2 c2)): xs) list
 													= (s, (getTypeFromString s2)): addToScope xs (list ++ [(s,(getTypeFromString s2))]) 
@@ -149,6 +149,7 @@ addToScope (_: xs) l								= addToScope xs l
 -}
 incType a s l c  = error ("Incorrect Type: " ++ (getValue a) ++ " is not a " ++ s ++ " ! Line:" ++ (show l) ++ ":" ++ (show c))
 incType2 a s l c = error ("Incorrect Type: Not all values of " ++ (getValue a) ++ " are " ++ s ++ "s ! Line:" ++ (show l) ++ ":" ++ (show c))
+
 inList :: String -> [(String, Types)] -> Bool
 inList a b = (elem (a,Int) b) || (elem (a,Str) b) || (elem (a,Boo) b) || (elem (a,Arr Int) b) || (elem (a,Arr Boo) b) || (elem (a,Arr Str) b) || (elem (a,Arr Str) b)
 
@@ -156,7 +157,7 @@ inList a b = (elem (a,Int) b) || (elem (a,Str) b) || (elem (a,Boo) b) || (elem (
 	Checks wether the type of the Right Hand Side of an Assignments is the same as the Left Hand Side.
 -}
 checkAssignType :: Tree -> Tree -> [[(String, Types)]] -> Bool
-checkAssignType idf val list = checkType val (getTreeType idf list) list
+checkAssignType idf val list = isType val (getTreeType idf list) list
 
 {-
 	Converts a String into a Type
@@ -186,63 +187,63 @@ getStringFromType s
 		Argument 3: The current Scope, in order to get Types of Identifiers
 		Returns:	True if the Type is correct, an Error if it's incorrect.
 -}
-checkType :: Tree -> Types -> [[(String, Types)]] -> Bool
-checkType tree Int list =
+isType :: Tree -> Types -> [[(String, Types)]] -> Bool
+isType tree Int list =
 	case tree of 
 		n@(VarNode s l c)  					| and (map (isNumber) s) || typ == Int || typ == Arr Int 	-> True
 											| otherwise													-> wrongType n "Integer" l c 
 											where
 												typ = getType s l c list
-		(OpNode s t1 t2)					-> checkType t1 Int list && checkType t2 Int list 
+		(OpNode s t1 t2)					-> isType t1 Int list && isType t2 Int list 
 		(DoFuncNode s xs)					| getType s 0 0 list == Int -> True
 											| otherwise 				-> wrongFuncType s "Integer" 
-		(ArrayOpNode t1 t2)					-> checkType t1 Int list && checkType t2 Int list 		
-		(GiftNode t1)						-> checkType t1 Int list
-		(PlunderNode t1)					-> checkType t1 Int list
+		(ArrayOpNode t1 t2)					-> isType t1 Int list && isType t2 Int list 		
+		(GiftNode t1)						-> isType t1 Int list
+		(PlunderNode t1)					-> isType t1 Int list
 		_									-> False
 
-checkType tree Str list =
+isType tree Str list =
 	case tree of
 		n@(VarNode s l c) 					| isString s || typ == Str || typ == Arr Str 	-> True
 											| otherwise										-> wrongType n "String" l c
 											where
 												typ = getType s l c list
-		(OpNode "+" t1 t2)					-> checkType t1 Str list && checkType t2 Str list 
+		(OpNode "+" t1 t2)					-> isType t1 Str list && isType t2 Str list 
 		(DoFuncNode s xs)					| getType s 0 0 list == Str -> True
 											| otherwise 				-> wrongFuncType s "String" 
-		(ArrayOpNode t1 t2)					-> checkType t1 Str list && checkType t2 Str list 		
+		(ArrayOpNode t1 t2)					-> isType t1 Str list && isType t2 Str list 		
 		_									-> False
 
-checkType tree Boo list =
+isType tree Boo list =
 	case tree of
 		n@(VarNode s l c)	 				| s == "Aye" || s == "Nay" || t == Boo || t == Arr Boo	-> True
 											| otherwise												-> wrongType n "Boolean" l c
 											where
 												t = getType s l c list
-		(BoolExNode (Comp "be" t1 t2))  	-> checkType t1 t list && checkType t2 t list
+		(BoolExNode (Comp "be" t1 t2))  	-> isType t1 t list && isType t2 t list
 											where
 												t = getTreeType t1 list
-		(BoolExNode (Boolean t1))			| checkType t1 Boo list									-> True
+		(BoolExNode (Boolean t1))			| isType t1 Boo list									-> True
 											| otherwise												-> wrongType t1 "Boolean" (getL t1) (getC t1)
-		(BoolExNode (Comp _ t1 t2)) 		-> checkType t1 Int list && checkType t1 Int list
+		(BoolExNode (Comp _ t1 t2)) 		-> isType t1 Int list && isType t1 Int list
 		(DoFuncNode s xs)					| getType s 0 0 list == Boo -> True
 											| otherwise 				-> wrongFuncType s "Boolean" 
-		(ArrayOpNode t1 t2)					-> checkType t1 Boo list && checkType t2 Boo list 	
+		(ArrayOpNode t1 t2)					-> isType t1 Boo list && isType t2 Boo list 	
 		_									-> False
 
-checkType tree (Arr t) list =
+isType tree (Arr t) list =
 	case tree of
 		n@(VarNode s l c) 					| isString s || typ == Arr t 	-> True
 											| otherwise						-> wrongType n "String" l c
 											where
 												typ = getType s l c list
-		(OpNode "+" t1 t2)					-> checkType t1 t list && checkType t2 t list 
+		(OpNode "+" t1 t2)					-> isType t1 t list && isType t2 t list 
 		(DoFuncNode s xs)					| getType s 0 0 list == t -> True
 											| otherwise 			  -> wrongFuncType s "Array" 
-		(ArrayOpNode t1 t2)					-> checkType t1 t list && checkType t2 t list 		
+		(ArrayOpNode t1 t2)					-> isType t1 t list && isType t2 t list 		
 		_									-> False
 {-
-	Helper Function for checkType.
+	Helper Function for isType.
 -}
 wrongType a b c d	= error ("Incorrect Type: " ++ (getS a) ++ " is not an " ++ b ++ "! Line: " ++ (show c) ++ ":" ++ (show d))
 wrongFuncType a b   = error ("Incorrect Type: " ++ a ++ " does not return an " ++ b ++ "!")
