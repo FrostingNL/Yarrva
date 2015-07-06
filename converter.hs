@@ -10,7 +10,7 @@ import Parse
 import Grammar
 import Checker
 
-main = start "Tests/prime.yarr"
+main = start "Tests/feb.yarr"
 
 {-
 	The main function, which starts the convertor.
@@ -42,10 +42,9 @@ start input
 		Returns:	A String containing a Haskell File with the Spril instructions.
 -}
 toSprockell :: [(String, Int)] -> Tree -> String
-toSprockell list tree = trace (show tree) $ 
+toSprockell list tree = 
 	case tree of
-		(DoubloonNode t1 t2)->	trace ("DOULOONL ") $  
-								spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
+		(DoubloonNode t1 t2)->	spacing ++ "-- doubloon " ++ (getValue t1) ++ " be " ++ 
 								printAndGetNode list t2 ++ " RegA,\n" ++ 
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
 		
@@ -57,8 +56,7 @@ toSprockell list tree = trace (show tree) $
 								printAndGetNode list t2 ++ " RegA,\n" ++
 								spacing ++ "Store RegA (Addr " ++ (show (getInt list t1)) ++ "),\n"
  
-		(OpNode s t1 t2)	->	trace ("SSDS: " ++ (show list)) $ 
-								(getValue t1) ++ " " ++ s ++ " " ++ (getValue t2) ++ "\n" ++
+		(OpNode s t1 t2)	->	(getValue t1) ++ " " ++ s ++ " " ++ (getValue t2) ++ "\n" ++
 								spacing ++ getNode list t1 ++ " RegB,\n" ++
 								spacing ++ getNode list t2 ++ " RegC,\n" ++
 								spacing ++ "Compute " ++ (getOp s True) ++ " RegB RegC RegA,\n" ++
@@ -111,11 +109,10 @@ toSprockell list tree = trace (show tree) $
 												spacing ++ "Compute Add PC Zero RegE,\n" ++
 												spacing ++ "Push RegE,\n" ++ 
 												boolEx t1 list ++
-												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+6)) ++ ")),\n" ++
+												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+4)) ++ ")),\n" ++
 												(concat (map (toSprockell list) xs)) ++
 												spacing ++ "Pop RegA,\n" ++
 												spacing ++ "Pop RegE,\n" ++
-												spacing ++ "Push RegA,\n" ++
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
@@ -124,12 +121,11 @@ toSprockell list tree = trace (show tree) $
 												spacing ++ "Compute Add PC Zero RegE,\n" ++
 												spacing ++ "Push RegE,\n" ++ 
 												boolEx t1 list ++
-												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+(calcLen [t3])+6)) ++ ")),\n" ++
+												spacing ++ "Branch RegA (Rel(" ++ (show ((calcLen xs)+(calcLen [t3])+4)) ++ ")),\n" ++
 												(concat (map (toSprockell list) xs)) ++ 
 												toSprockell list t3 ++
 												spacing ++ "Pop RegA,\n" ++
 												spacing ++ "Pop RegE,\n" ++
-												spacing ++ "Push RegA,\n" ++
 												spacing ++ "Jump (Ind RegE),\n" ++
 												spacing ++ "Pop RegE,\n" 
 
@@ -161,7 +157,6 @@ toSprockell list tree = trace (show tree) $
 												(concat (map (toSprockell list) xs')) ++
 												spacing ++ "Pop RegD,\n" ++
 												spacing ++ "Jump (Ind RegD),\n"
-
 
 		n@(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const " ++ (show ((calcLen xs)+4)) ++ " RegA,\n" ++ 
@@ -233,7 +228,7 @@ calcLen ((OpNode _ (VarNode _ _ _) (VarNode _ _ _)):xs) 	= 4 + calcLen xs
 calcLen ((OpNode _ (VarNode _ _ _) xs):xs') 				= 4 + calcLen [xs] + calcLen xs' 
 calcLen ((IfNode _ xs):xs')									= 4 + calcLen xs + calcLen xs'
 calcLen ((IfElseNode _ xs t1):xs')							= 4 + calcLen xs + calcLen [t1] + calcLen xs'
-calcLen ((WhileNode t1 xs): xs')							= 9 + calcLen xs + calcLen xs'
+calcLen ((WhileNode t1 xs): xs')							= 8 + calcLen xs + calcLen xs'
 calcLen ((ForNode t1 t2 t3 xs): xs')						= 10 + calcLen [t1] + calcLen [t2] + calcLen [t3] + calcLen xs + calcLen xs'
 calcLen ((ElseNode xs): xs')								= 1 + calcLen xs + calcLen xs'
 calcLen ((GiftNode t1): xs)									= 5 + calcLen xs

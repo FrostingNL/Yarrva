@@ -1,0 +1,5 @@
+fleet DivBy0 {
+	flagship() {
+		doubloon a be 10/0, Arrr!
+	}
+}

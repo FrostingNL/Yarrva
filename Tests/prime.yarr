@@ -1,13 +1,21 @@
 fleet Prime {
 	orderShip isPrime(doubloon num) {
+		doubloon temp be 0, Arrr!
+		order res be Aye, Arrr!
 		navigate(doubloon i be 2. i be below num. gift i) {
-			parrot i, Arrr!
+			temp be num % i, Arrr!
+			parley(temp be 0) {
+				parley(i be num) { }
+				heave { 
+					res be Nay, Arrr!
+				}
+			}
 		}
-		avast Aye, Arrr!
+		avast res, Arrr!
 	}
 
 	flagship() {
-		doubloon x be 13, Arrr!
+		doubloon x be 14, Arrr!
 		parrot isPrime(x), Arrr!
 	}
 }

@@ -11,6 +11,6 @@ fleet FebCalc {
 
 	flagship() {
 		doubloon y be 2032, Arrr!
-		feb(2032), Arrr!
+		parrot feb(y), Arrr!
 	}
 }

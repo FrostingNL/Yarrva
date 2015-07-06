@@ -294,7 +294,7 @@ inScope list tree =
 	case tree of
 		(BoolExNode (Boolean t1)) 	| inScope list t1 -> True
 									| otherwise 	  -> scopeError (getValue t1)
-		(GiftNode t1) 				| trace (show t1) $ inScope list t1 -> True
+		(GiftNode t1) 				| inScope list t1 -> True
 									| otherwise 	  -> scopeError (getValue t1)
 		(PlunderNode t1) 			| inScope list t1 -> True
 									| otherwise 	  -> scopeError (getValue t1)
