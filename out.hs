@@ -1,50 +1,76 @@
 import Sprockell.System
 
 prog = [
-       -- feb(year Int)
+       -- upNumber(x Int, y Int)
        Const 3 RegA,
        Compute Add PC RegA RegE,
        Store RegE (Addr 1),
-       Jump (Rel(25)),
+       Jump (Rel(45)),
+       Pop RegA,
+       Load (Deref RegA) RegB,
+       Store RegB (Addr 3),
        Pop RegA,
        Load (Deref RegA) RegB,
        Store RegB (Addr 2),
-       -- doubloon temp be year % 4
-       Load (Addr 2) RegB,
-       Const (4) RegC,
-       Compute Mod RegB RegC RegA,
+       -- addFive(c Int)
+       Const 3 RegA,
+       Compute Add PC RegA RegE,
+       Store RegE (Addr 5),
+       Jump (Rel(16)),
+       Pop RegA,
+       Load (Deref RegA) RegB,
+       Store RegB (Addr 6),
+       -- doubloon temp be c + 5
+       Load (Addr 6) RegB,
+       Const (5) RegC,
+       Compute Add RegB RegC RegA,
        Push RegA,
        Pop  RegA,
-       Store RegA (Addr 4),
-       -- parley(temp be 0)
-       Const (0) RegA,
-       Load (Addr 4) RegB,
-       Compute NEq RegB RegA RegA,
-       Branch RegA (Rel(6)),
-       -- avast 28
-       Pop RegE,
-       Const (28) RegA,
+       Store RegA (Addr 8),
+       -- avast temp
+       Load (Addr 8) RegA,
+       Pop RegD,
        Push RegA,
-       Push RegE,
-       Jump (Rel(5)),
-       -- heave
-       -- avast 29
-       Pop RegE,
-       Const (29) RegA,
+       Push RegD,
+       Pop RegD,
+       Jump (Ind RegD),
+       -- doubloon result be x + y
+       Load (Addr 2) RegB,
+       Load (Addr 3) RegC,
+       Compute Add RegB RegC RegA,
        Push RegA,
-       Push RegE,
-       Pop RegE,
-       Jump (Ind RegE),
-       -- flagship()
-       -- doubloon year be 2001
-       Const (2001) RegA,
-       Store RegA (Addr 2),
-       -- parrot (feb(year))
-              -- feb(year)
+       Pop  RegA,
+       Store RegA (Addr 10),
+       -- avast addFive(result)
+              -- addFive(result)
        Const 6 RegA,
        Compute Add PC RegA RegE,
        Push RegE,
+       Const 10 RegA,
+       Push RegA,
+       Load (Addr 5) RegA,
+       Jump (Ind RegA),
+       Pop  RegA,
+       Pop RegD,
+       Push RegA,
+       Push RegD,
+       Pop RegD,
+       Jump (Ind RegD),
+       -- flagship()
+       -- doubloon x be 1
+       Const (1) RegA,
+       Store RegA (Addr 2),
+       -- doubloon y be 3
+       Const (3) RegA,
+       Store RegA (Addr 3),
+       -- parrot (upNumber(xy))
+              -- upNumber(x, y)
+       Const 8 RegA,
+       Compute Add PC RegA RegE,
+       Push RegE,
        Const 2 RegA,
+       Push RegA,
+       Const 3 RegA,
        Push RegA,
        Load (Addr 1) RegA,
        Jump (Ind RegA),

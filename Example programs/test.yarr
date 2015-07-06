@@ -1,18 +1,18 @@
 fleet showDoubloonFunc {
 
-	doubloonShip feb(doubloon year) {
-		doubloon temp be year % 4, Arrr!
-		parley(temp be 0) {
-			avast 28, Arrr!
-		}
-		heave {
-			avast 29, Arrr!
-		}
+	doubloonShip upNumber(doubloon x, doubloon y) {
+	 	doubloonShip addFive(doubloon c) {
+	 		doubloon temp be c + 5, Arrr!
+	 		avast temp, Arrr!
+	 	}
+		doubloon result be x + y, Arrr!
+		avast addFive(result), Arrr!
 	}
 
 
 	flagship() {
-		doubloon year be 2001, Arrr!
-		parrot feb(year), Arrr!
+		doubloon x be 1, Arrr!
+		doubloon y be 3, Arrr!
+		parrot upNumber(x, y), Arrr!
 	}
 }

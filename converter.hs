@@ -133,23 +133,24 @@ toSprockell list tree =
 												spacing ++ "Pop RegE,\n" 
 
 		n@(ReturnNode _ t1)					->	spacing ++ "-- avast " ++ (getValue t1) ++ "\n" ++
-												spacing ++ "Pop RegE,\n" ++
 												spacing ++ getNode list t1 ++ " RegA,\n" ++
+												spacing ++ "Pop RegD,\n" ++
 												spacing ++ "Push RegA,\n" ++
-												spacing ++ "Push RegE,\n"
+												spacing ++ "Push RegD,\n"
 
 		n@(FuncNode "flagship" xs xs')		-> 	spacing ++ "-- flagship()\n" ++
 												(concat (map (toSprockell list) xs'))
 
-		n@(IntFuncNode s xs xs')			->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
+		n@(IntFuncNode s xs xs')			->	trace ("\n" ++ (show xs'))
+												spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const 3 RegA,\n" ++
 												spacing ++ "Compute Add PC RegA RegE,\n" ++ 
 												spacing ++ "Store RegE (Addr " ++ (show (getInt list n)) ++ "),\n" ++ 
 												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+(calcLen xs)+3)) ++ ")),\n" ++
 												popFunc list xs ++ 
 												(concat (map (toSprockell list) xs')) ++
-												spacing ++ "Pop RegE,\n" ++
-												spacing ++ "Jump (Ind RegE),\n"
+												spacing ++ "Pop RegD,\n" ++
+												spacing ++ "Jump (Ind RegD),\n"
 
 		n@(BoolFuncNode s xs xs')			->	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
 												spacing ++ "Const 3 RegA,\n" ++
@@ -158,8 +159,8 @@ toSprockell list tree =
 												spacing ++ "Jump (Rel(" ++ (show ((calcLen xs')+(calcLen xs)+3)) ++ ")),\n" ++
 												popFunc list xs ++ 
 												(concat (map (toSprockell list) xs')) ++
-												spacing ++ "Pop RegE,\n" ++
-												spacing ++ "Jump (Ind RegE),\n"
+												spacing ++ "Pop RegD,\n" ++
+												spacing ++ "Jump (Ind RegD),\n"
 
 
 		n@(DoFuncNode s xs)					-> 	spacing ++ "-- " ++ s ++ "(" ++ (funcText xs) ++ ")\n" ++
@@ -256,9 +257,10 @@ calcLen ((PrintNode t1): xs)								= 6 + calcLen [t1] + calcLen xs
 calcLen ((IntFuncNode _ t1 t2): xs)							= 6 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((BoolFuncNode _ t1 t2): xs)							= 6 + calcLen t1 + calcLen t2 + calcLen xs
 calcLen ((FuncValNode t1 t2): xs) 							= 3 + calcLen xs
-calcLen ((DoFuncNode _ xs): xs')							= 5 + calcLen xs + calcLen xs'
+calcLen ((DoFuncNode _ xs): xs')							= trace ("DFN: " ++ show (5 + calcLen xs)) 5 + calcLen xs + calcLen xs'
 calcLen ((VarNode _ _ _): xs)							 	= 2 + calcLen xs
-calcLen ((ReturnNode _ _): xs)								= 4 + calcLen xs
+calcLen ((ReturnNode _ (VarNode _ _ _)): xs)				= 4 + calcLen xs
+calcLen ((ReturnNode _ t): xs) 								= 4 + calcLen [t] + calcLen xs
 calcLen _													= 0
 
 {-
